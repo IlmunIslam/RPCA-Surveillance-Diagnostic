@@ -1,0 +1,10 @@
+*.npy
+*.mp4
+*.avi
+data/raw/
+data/processed/
+results/
+__pycache__/
+*.pyc
+.env
+logs/*.log
