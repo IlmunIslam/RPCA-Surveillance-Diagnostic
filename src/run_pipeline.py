@@ -124,15 +124,15 @@ def process_video(video_id, video_path, verbose=True):
     # 6. SUMMARY TABLE
     # ------------------------------------------------------------------
     print()
-    print(f"╔══════════════════════════════════════════════╗")
-    print(f"║ RESULTS: {video_id:<36}║")
-    print(f"╠══════════════╦══════════╦══════════╦════════╣")
-    print(f"║ Method       ║ PSNR(dB) ║  SSIM    ║ Time   ║")
-    print(f"╠══════════════╬══════════╬══════════╬════════╣")
-    print(f"║ Tensor RPCA  ║  {mean_psnr_t:>6.2f}  ║  {mean_ssim_t:.4f}  ║ {tensor_time:>4}s  ║")
-    print(f"║ SS-RTD       ║  {mean_psnr_s:>6.2f}  ║  {mean_ssim_s:.4f}  ║ {ssrtd_time:>4}s  ║")
-    print(f"║ Hybrid       ║  {mean_psnr_h:>6.2f}  ║  {mean_ssim_h:.4f}  ║ {hybrid_time:>4}s  ║")
-    print(f"╚══════════════╩══════════╩══════════╩════════╝")
+    print(f"+----------------------------------------------+")
+    print(f"| RESULTS: {video_id:<36}|")
+    print(f"+--------------+----------+----------+--------+")
+    print(f"| Method       | PSNR(dB) |  SSIM    | Time   |")
+    print(f"+--------------+----------+----------+--------+")
+    print(f"| Tensor RPCA  |  {mean_psnr_t:>6.2f}  |  {mean_ssim_t:.4f}  | {tensor_time:>4}s  |")
+    print(f"| SS-RTD       |  {mean_psnr_s:>6.2f}  |  {mean_ssim_s:.4f}  | {ssrtd_time:>4}s  |")
+    print(f"| Hybrid       |  {mean_psnr_h:>6.2f}  |  {mean_ssim_h:.4f}  | {hybrid_time:>4}s  |")
+    print(f"+--------------+----------+----------+--------+")
 
     return results
 
