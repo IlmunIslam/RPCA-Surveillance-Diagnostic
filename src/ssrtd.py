@@ -43,7 +43,7 @@ def tensor_svt(X, threshold):
 # Main algorithm
 # ---------------------------------------------------------------------------
 
-def ssrtd(X, lam_s=0.001, lam_n=0.002, max_iter=500, tol=1e-7):
+def ssrtd(X, lam_s=0.01, lam_n=0.001, max_iter=500, tol=1e-7):
     """
     SS-RTD modified for surveillance video — smoothness penalty removed.
 

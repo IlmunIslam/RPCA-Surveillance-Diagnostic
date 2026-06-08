@@ -27,7 +27,7 @@ Short ID mapping: see video_registry.csv (generated in Phase 1)
   (NOT L + S — this was a prior bug, N carries movement when S collapses to 0)
 - Resolution: 320x180 grayscale (downsampled from original)
 - Lambda Phase 1 & 2: 1/sqrt(max(height, width)) = 0.004167
-- SS-RTD: lam_s=0.001, lam_n=0.002, smoothness penalty REMOVED (caused overflow)
+- SS-RTD: lam_s=0.01, lam_n=0.001, smoothness penalty REMOVED. Parameter search on video_39 confirmed binary winner-takes-all behavior — lam_s > lam_n forces foreground into N component.
 - Compression measurement: H.264 via ffmpeg, CRF=23 for reference, CRF=28 for components
 - Metrics: PSNR, SSIM, sparsity %, file size (KB), compression ratio vs original
 

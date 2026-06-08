@@ -54,7 +54,7 @@ def process_video(video_id, video_path, verbose=True):
     # 3. SS-RTD
     # ------------------------------------------------------------------
     t0 = time.time()
-    L_ssrtd, S_ssrtd, N_ssrtd, n_iter_ssrtd = ssrtd(X_tensor)
+    L_ssrtd, S_ssrtd, N_ssrtd, n_iter_ssrtd = ssrtd(X_tensor, lam_s=0.01, lam_n=0.001)
     ssrtd_time = round(time.time() - t0, 1)
 
     recon_ssrtd = np.transpose(L_ssrtd + N_ssrtd, (2, 0, 1))      # (T, H, W) — L+N, not L+S
