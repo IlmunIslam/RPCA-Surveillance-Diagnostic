@@ -13,6 +13,7 @@ from src.tensor_rpca import tensor_rpca
 from src.ssrtd import ssrtd
 from src.hybrid_encoder import build_hybrid, hybrid_to_frames, save_video_mp4
 from src.metrics import compute_psnr_sequence, compute_ssim_sequence, compute_sparsity
+from src.compression import run_compression_analysis
 
 PROJECT_DIR = Path(__file__).parent.parent
 VIDEO_DIR = Path("VIDEO_DIR_PLACEHOLDER")
@@ -90,7 +91,23 @@ def process_video(video_id, video_path, verbose=True):
     print(f"  Hybrid: PSNR={mean_psnr_h:.2f} dB, SSIM={mean_ssim_h:.4f}, time={hybrid_time}s")
 
     # ------------------------------------------------------------------
-    # 5. SAVE METRICS ROW
+    # 5. COMPRESSION ANALYSIS
+    # ------------------------------------------------------------------
+    compression_dir = RESULTS_DIR / "compression" / video_id
+    compression_dir.mkdir(parents=True, exist_ok=True)
+
+    compression_results = run_compression_analysis(
+        video_id, original_frames,
+        L_tensor, S_tensor,
+        L_ssrtd, S_ssrtd, N_ssrtd,
+        hybrid_frames, compression_dir,
+    )
+
+    # Index compression results by label for easy lookup
+    comp = {r["label"]: r for r in compression_results}
+
+    # ------------------------------------------------------------------
+    # 6. SAVE METRICS ROW  (was step 5 before compression was added)
     # ------------------------------------------------------------------
     results = {
         "video_id": video_id,
@@ -107,6 +124,15 @@ def process_video(video_id, video_path, verbose=True):
         "hybrid_psnr": mean_psnr_h,
         "hybrid_ssim": mean_ssim_h,
         "hybrid_time_s": hybrid_time,
+        "original_ref_kb": comp.get("original", {}).get("reference_kb"),
+        "original_comp_kb": comp.get("original", {}).get("compressed_kb"),
+        "L_tensor_kb": comp.get("L_tensor", {}).get("compressed_kb"),
+        "S_tensor_kb": comp.get("S_tensor", {}).get("compressed_kb"),
+        "N_ssrtd_kb": comp.get("N_ssrtd", {}).get("compressed_kb"),
+        "hybrid_kb": comp.get("hybrid", {}).get("compressed_kb"),
+        "hybrid_compression_ratio": comp.get("hybrid", {}).get("compression_ratio"),
+        "hybrid_psnr_after_h264": comp.get("hybrid", {}).get("psnr_after_h264"),
+        "hybrid_ssim_after_h264": comp.get("hybrid", {}).get("ssim_after_h264"),
         "processed_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
     }
 
