@@ -6,7 +6,7 @@ from pathlib import Path
 import cv2
 import pandas as pd
 
-VIDEO_DIR = Path(r"S:\works\Video compression Research\CCTV 01")
+VIDEO_DIR = Path(r"S:\works\Video compression Research\RPCA_Hybrid_Project\data\videos")
 OUTPUT_CSV = Path(r"S:\works\Video compression Research\RPCA_Hybrid_Project\video_registry.csv")
 FRAME_CAP = 300
 VIDEO_EXTENSIONS = {".mp4", ".avi", ".mov", ".mkv", ".wmv", ".flv", ".webm"}

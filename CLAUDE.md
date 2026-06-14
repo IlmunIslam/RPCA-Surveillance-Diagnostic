@@ -9,9 +9,10 @@ L component with SS-RTD's N component.
 IEEE Access or ICIP workshop paper.
 
 ## Dataset
-58 VIRAT Ground surveillance videos
-Location: S:\works\Video compression Research\CCTV 01\
-Short ID mapping: see video_registry.csv (generated in Phase 1)
+180 VIRAT Ground 2.0 surveillance videos (videos-01 subset, scenes S_010000–S_010208)
+Location: S:\works\Video compression Research\RPCA_Hybrid_Project\data\videos\
+Short ID mapping: see video_registry.csv — 180 videos confirmed, all ≥300 frames, 1280×720 @ 23.97fps
+Annotations: data\annotations\ — 343 .viratdata.objects.txt files covering all scenes
 
 ## Methods Being Compared
 1. Matrix RPCA (baseline)
@@ -42,4 +43,4 @@ Short ID mapping: see video_registry.csv (generated in Phase 1)
 - New clean run starts from scratch in this project folder
 
 ## Current Status
-Phase 0: Setup in progress
+Phase 1 complete. 180 official VIRAT Ground 2.0 videos ready. Annotations downloaded. Ready for pipeline execution.
