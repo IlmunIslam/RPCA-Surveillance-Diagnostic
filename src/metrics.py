@@ -52,6 +52,25 @@ def compute_compression_ratio(original_size_kb, compressed_size_kb):
     return round(compressed_size_kb / original_size_kb, 4)
 
 
+def compute_foreground_density(frames):
+    """
+    Estimates foreground density of a video — a diagnostic to predict
+    S/N collapse direction in SS-RTD.
+
+    Parameters:
+      frames : numpy array (T, H, W), float64, values [0,1]
+
+    Returns foreground density as a percentage (mean fraction of moving pixels
+    per frame, where "moving" = abs diff from temporal median > 0.1), rounded
+    to 4 decimal places.
+    """
+    median_frame = np.median(frames, axis=0)          # (H, W)
+    diff = np.abs(frames - median_frame)              # (T, H, W)
+    moving = diff > 0.1                               # (T, H, W) bool
+    density = moving.mean()                           # scalar: mean fraction across all T, H, W
+    return round(float(density) * 100, 4)
+
+
 def summarize_metrics(video_id, method_name, original_frames, reconstructed_frames,
                       S_component, original_file_kb, compressed_file_kb):
     mean_psnr, std_psnr, _ = compute_psnr_sequence(original_frames, reconstructed_frames)

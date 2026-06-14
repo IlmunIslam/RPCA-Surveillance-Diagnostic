@@ -12,7 +12,7 @@ from src.preprocessing import load_video_frames, frames_to_tensor, frames_to_mat
 from src.tensor_rpca import tensor_rpca
 from src.ssrtd import ssrtd
 from src.hybrid_encoder import build_hybrid, hybrid_to_frames, save_video_mp4
-from src.metrics import compute_psnr_sequence, compute_ssim_sequence, compute_sparsity
+from src.metrics import compute_psnr_sequence, compute_ssim_sequence, compute_sparsity, compute_foreground_density
 from src.compression import run_compression_analysis
 
 PROJECT_DIR = Path(__file__).parent.parent
@@ -28,7 +28,8 @@ def process_video(video_id, video_path, verbose=True):
     original_frames = load_video_frames(video_path, max_frames=300)
     T = original_frames.shape[0]
     X_tensor = frames_to_tensor(original_frames)   # (H, W, T)
-    print(f"\n=== Processing {video_id} === loaded {T} frames")
+    fg_density = compute_foreground_density(original_frames)
+    print(f"\n=== Processing {video_id} === loaded {T} frames, fg_density={fg_density:.4f}%")
 
     # ------------------------------------------------------------------
     # 2. TENSOR RPCA
@@ -112,6 +113,7 @@ def process_video(video_id, video_path, verbose=True):
     results = {
         "video_id": video_id,
         "total_frames": T,
+        "foreground_density": fg_density,
         "tensor_psnr": mean_psnr_t,
         "tensor_ssim": mean_ssim_t,
         "tensor_s_sparsity": s_sparsity_t,
