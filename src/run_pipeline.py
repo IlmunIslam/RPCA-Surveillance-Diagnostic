@@ -58,7 +58,7 @@ def process_video(video_id, video_path, verbose=True):
     L_ssrtd, S_ssrtd, N_ssrtd, n_iter_ssrtd = ssrtd(X_tensor, lam_s=0.01, lam_n=0.001)
     ssrtd_time = round(time.time() - t0, 1)
 
-    recon_ssrtd = np.transpose(L_ssrtd + N_ssrtd, (2, 0, 1))      # (T, H, W) — L+N, not L+S
+    recon_ssrtd = np.transpose(L_ssrtd + S_ssrtd + N_ssrtd, (2, 0, 1))  # (T, H, W) — full X=L+S+N (verification)
     mean_psnr_s, std_psnr_s, _ = compute_psnr_sequence(original_frames, recon_ssrtd)
     mean_ssim_s, std_ssim_s, _ = compute_ssim_sequence(original_frames, recon_ssrtd)
     s_sparsity_s = compute_sparsity(S_ssrtd)
@@ -122,6 +122,9 @@ def process_video(video_id, video_path, verbose=True):
         "ssrtd_ssim": mean_ssim_s,
         "ssrtd_s_sparsity": s_sparsity_s,
         "ssrtd_n_sparsity": n_sparsity_s,
+        "ssrtd_winner": "S" if s_sparsity_s < n_sparsity_s else "N",
+        "ssrtd_s_nonzero_pct": round(100 - s_sparsity_s, 4),
+        "ssrtd_n_nonzero_pct": round(100 - n_sparsity_s, 4),
         "ssrtd_time_s": ssrtd_time,
         "hybrid_psnr": mean_psnr_h,
         "hybrid_ssim": mean_ssim_h,
