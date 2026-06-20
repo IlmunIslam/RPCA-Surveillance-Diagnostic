@@ -1,5 +1,6 @@
 import argparse
 import os
+import shutil
 import sys
 import time
 from datetime import datetime
@@ -11,7 +12,7 @@ import pandas as pd
 from src.preprocessing import load_video_frames, frames_to_tensor, frames_to_matrix
 from src.tensor_rpca import tensor_rpca
 from src.ssrtd import ssrtd
-from src.hybrid_encoder import build_hybrid, hybrid_to_frames, save_video_mp4
+from src.hybrid_encoder import build_hybrid, hybrid_to_frames
 from src.metrics import compute_psnr_sequence, compute_ssim_sequence, compute_sparsity, compute_foreground_density
 from src.compression import run_compression_analysis
 
@@ -43,10 +44,8 @@ def process_video(video_id, video_path, verbose=True):
     mean_ssim_t, std_ssim_t, _ = compute_ssim_sequence(original_frames, recon_tensor)
     s_sparsity_t = compute_sparsity(S_tensor)
 
-    rpca_dir = RESULTS_DIR / "tensor_rpca" / video_id
-    rpca_dir.mkdir(parents=True, exist_ok=True)
-    np.save(rpca_dir / "L_tensor.npy", L_tensor)
-    np.save(rpca_dir / "S_tensor.npy", S_tensor)
+    # Components are intermediate only — used for metrics/compression below,
+    # not persisted (each save was ~0.27 GB and filled the disk). See change log.
 
     print(f"  Tensor RPCA: PSNR={mean_psnr_t:.2f} dB, SSIM={mean_ssim_t:.4f}, "
           f"S_sparsity={s_sparsity_t:.2f}%, time={tensor_time}s")
@@ -64,11 +63,7 @@ def process_video(video_id, video_path, verbose=True):
     s_sparsity_s = compute_sparsity(S_ssrtd)
     n_sparsity_s = compute_sparsity(N_ssrtd)
 
-    ssrtd_dir = RESULTS_DIR / "ssrtd" / video_id
-    ssrtd_dir.mkdir(parents=True, exist_ok=True)
-    np.save(ssrtd_dir / "L_ssrtd.npy", L_ssrtd)
-    np.save(ssrtd_dir / "S_ssrtd.npy", S_ssrtd)
-    np.save(ssrtd_dir / "N_ssrtd.npy", N_ssrtd)
+    # SS-RTD components kept in memory only (not persisted — see Tensor RPCA note).
 
     print(f"  SS-RTD: PSNR={mean_psnr_s:.2f} dB, SSIM={mean_ssim_s:.4f}, "
           f"S_sparsity={s_sparsity_s:.2f}%, N_sparsity={n_sparsity_s:.2f}%, time={ssrtd_time}s")
@@ -84,10 +79,9 @@ def process_video(video_id, video_path, verbose=True):
     mean_psnr_h, std_psnr_h, _ = compute_psnr_sequence(original_frames, hybrid_frames)
     mean_ssim_h, std_ssim_h, _ = compute_ssim_sequence(original_frames, hybrid_frames)
 
-    hybrid_dir = RESULTS_DIR / "hybrid" / video_id
-    hybrid_dir.mkdir(parents=True, exist_ok=True)
-    np.save(hybrid_dir / "hybrid.npy", hybrid)
-    save_video_mp4(hybrid_frames, hybrid_dir / "hybrid_reconstructed.mp4")
+    # Nothing persisted here: hybrid_frames stays in memory and feeds the
+    # compression step below (the hybrid file-size number is still measured —
+    # a useful negative result), but no hybrid_reconstructed.mp4 is written.
 
     print(f"  Hybrid: PSNR={mean_psnr_h:.2f} dB, SSIM={mean_ssim_h:.4f}, time={hybrid_time}s")
 
@@ -106,6 +100,11 @@ def process_video(video_id, video_path, verbose=True):
 
     # Index compression results by label for easy lookup
     comp = {r["label"]: r for r in compression_results}
+
+    # The H.264 mp4s were written only to measure their sizes; sizes are now
+    # captured in `comp`, so delete the temp folder — each video should leave
+    # behind only its CSV row.
+    shutil.rmtree(compression_dir, ignore_errors=True)
 
     # ------------------------------------------------------------------
     # 6. SAVE METRICS ROW  (was step 5 before compression was added)
@@ -189,8 +188,8 @@ if __name__ == "__main__":
         print(f"ERROR: Video not found at {video_path}")
         sys.exit(1)
 
-    for subdir in ["tensor_rpca", "ssrtd", "hybrid", "metrics"]:
-        (RESULTS_DIR / subdir / args.video_id).mkdir(parents=True, exist_ok=True)
+    # Only the metrics CSV is a permanent per-video output now; component and
+    # compression artifacts are transient, so don't pre-create their folders.
     (RESULTS_DIR / "metrics").mkdir(parents=True, exist_ok=True)
 
     print(f"\nStarting pipeline for {args.video_id} ({filename})")
