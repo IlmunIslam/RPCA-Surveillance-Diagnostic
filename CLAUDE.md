@@ -15,11 +15,9 @@ Short ID mapping: see video_registry.csv — 180 videos confirmed, all ≥300 fr
 Annotations: data\annotations\ — 343 .viratdata.objects.txt files covering all scenes
 
 ## Methods Being Compared
-1. Matrix RPCA (baseline)
-2. Tensor RPCA (Phase 2) — produces best L (temporally consistent background)
-3. SS-RTD (Phase 3) — produces best N (sparse movement carrier)
-4. Hybrid: Tensor RPCA L + SS-RTD N (main contribution)
-5. Chen 2012 LRSD (published baseline for comparison)
+1. Tensor RPCA (Phase 2) — produces best L (temporally consistent background)
+2. SS-RTD (Phase 3) — produces best N (sparse movement carrier)
+3. Hybrid: Tensor RPCA L + SS-RTD N (main contribution)
 
 ## Key Technical Decisions
 - Frame cap: 300 frames (12 sec) per video. Videos shorter than 300 frames 

@@ -10,11 +10,9 @@ This project evaluates and compares low-rank + sparse decomposition approaches f
 
 | Method | Description |
 |---|---|
-| Matrix RPCA | Classical baseline |
 | Tensor RPCA | Low-rank tensor decomposition — best background separation |
 | SS-RTD | Smooth+Sparse+Residual Tensor Decomposition — best sparse carrier |
 | **Hybrid** | Tensor RPCA L + SS-RTD N *(main contribution)* |
-| Chen 2012 LRSD | Published baseline |
 
 ## Dataset
 

@@ -21,6 +21,51 @@ VIDEO_DIR = Path("VIDEO_DIR_PLACEHOLDER")
 RESULTS_DIR = PROJECT_DIR / "results"
 METRICS_CSV = RESULTS_DIR / "metrics" / "all_results.csv"
 
+# Videos for which full component arrays + a sample-frame figure are persisted
+# (paper figures only): video_01 + highest/lowest foreground_density from the
+# first batch (video_108=3.13%, video_101=0.02%). All others save the CSV row only.
+FIGURE_VIDEO_IDS = {"video_01", "video_101", "video_108"}
+
+
+def save_figure_components(video_id, original_frames,
+                           L_tensor, S_tensor,
+                           L_ssrtd, S_ssrtd, N_ssrtd):
+    """Persist the 5 component arrays (.npy) and a middle-frame visualization
+    (.png) for the few videos used in paper figures. Components are (H, W, T);
+    original_frames is (T, H, W)."""
+    out_dir = RESULTS_DIR / "figures" / video_id
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    np.save(out_dir / "L_tensor.npy", L_tensor)
+    np.save(out_dir / "S_tensor.npy", S_tensor)
+    np.save(out_dir / "L_ssrtd.npy",  L_ssrtd)
+    np.save(out_dir / "S_ssrtd.npy",  S_ssrtd)
+    np.save(out_dir / "N_ssrtd.npy",  N_ssrtd)
+
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    t = original_frames.shape[0] // 2  # middle frame
+    panels = [
+        ("Original", original_frames[t]),
+        ("L_tensor", L_tensor[:, :, t]),
+        ("S_tensor", S_tensor[:, :, t]),
+        ("L_ssrtd",  L_ssrtd[:, :, t]),
+        ("S_ssrtd",  S_ssrtd[:, :, t]),
+        ("N_ssrtd",  N_ssrtd[:, :, t]),
+    ]
+    fig, axes = plt.subplots(2, 3, figsize=(12, 5))
+    for ax, (title, img) in zip(axes.ravel(), panels):
+        ax.imshow(img, cmap="gray")
+        ax.set_title(f"{title} (frame {t})", fontsize=9)
+        ax.axis("off")
+    fig.suptitle(f"{video_id} — component decomposition")
+    fig.tight_layout()
+    fig.savefig(out_dir / f"{video_id}_components_frame{t}.png", dpi=150)
+    plt.close(fig)
+    print(f"  [figures] Saved 5 .npy arrays + sample frame to {out_dir}")
+
 
 def process_video(video_id, video_path, verbose=True):
     # ------------------------------------------------------------------
@@ -67,6 +112,16 @@ def process_video(video_id, video_path, verbose=True):
 
     print(f"  SS-RTD: PSNR={mean_psnr_s:.2f} dB, SSIM={mean_ssim_s:.4f}, "
           f"S_sparsity={s_sparsity_s:.2f}%, N_sparsity={n_sparsity_s:.2f}%, time={ssrtd_time}s")
+
+    # ------------------------------------------------------------------
+    # 3b. PERSIST COMPONENTS FOR PAPER FIGURES (3 representative videos only)
+    # ------------------------------------------------------------------
+    if video_id in FIGURE_VIDEO_IDS:
+        save_figure_components(
+            video_id, original_frames,
+            L_tensor, S_tensor,
+            L_ssrtd, S_ssrtd, N_ssrtd,
+        )
 
     # ------------------------------------------------------------------
     # 4. HYBRID
