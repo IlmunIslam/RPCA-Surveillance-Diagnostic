@@ -41,30 +41,36 @@ def save_figure_components(video_id, original_frames,
     np.save(out_dir / "L_ssrtd.npy",  L_ssrtd)
     np.save(out_dir / "S_ssrtd.npy",  S_ssrtd)
     np.save(out_dir / "N_ssrtd.npy",  N_ssrtd)
+    print(f"  [figures] Saved 5 .npy arrays to {out_dir}")
 
-    import matplotlib
-    matplotlib.use("Agg")
-    import matplotlib.pyplot as plt
+    # The sample-frame PNG is best-effort: a plotting failure (e.g. matplotlib
+    # not installed) must NOT crash the pipeline and cost the video its CSV row.
+    try:
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
 
-    t = original_frames.shape[0] // 2  # middle frame
-    panels = [
-        ("Original", original_frames[t]),
-        ("L_tensor", L_tensor[:, :, t]),
-        ("S_tensor", S_tensor[:, :, t]),
-        ("L_ssrtd",  L_ssrtd[:, :, t]),
-        ("S_ssrtd",  S_ssrtd[:, :, t]),
-        ("N_ssrtd",  N_ssrtd[:, :, t]),
-    ]
-    fig, axes = plt.subplots(2, 3, figsize=(12, 5))
-    for ax, (title, img) in zip(axes.ravel(), panels):
-        ax.imshow(img, cmap="gray")
-        ax.set_title(f"{title} (frame {t})", fontsize=9)
-        ax.axis("off")
-    fig.suptitle(f"{video_id} — component decomposition")
-    fig.tight_layout()
-    fig.savefig(out_dir / f"{video_id}_components_frame{t}.png", dpi=150)
-    plt.close(fig)
-    print(f"  [figures] Saved 5 .npy arrays + sample frame to {out_dir}")
+        t = original_frames.shape[0] // 2  # middle frame
+        panels = [
+            ("Original", original_frames[t]),
+            ("L_tensor", L_tensor[:, :, t]),
+            ("S_tensor", S_tensor[:, :, t]),
+            ("L_ssrtd",  L_ssrtd[:, :, t]),
+            ("S_ssrtd",  S_ssrtd[:, :, t]),
+            ("N_ssrtd",  N_ssrtd[:, :, t]),
+        ]
+        fig, axes = plt.subplots(2, 3, figsize=(12, 5))
+        for ax, (title, img) in zip(axes.ravel(), panels):
+            ax.imshow(img, cmap="gray")
+            ax.set_title(f"{title} (frame {t})", fontsize=9)
+            ax.axis("off")
+        fig.suptitle(f"{video_id} — component decomposition")
+        fig.tight_layout()
+        fig.savefig(out_dir / f"{video_id}_components_frame{t}.png", dpi=150)
+        plt.close(fig)
+        print(f"  [figures] Saved sample-frame PNG (frame {t})")
+    except Exception as exc:
+        print(f"  [figures] WARNING: sample-frame PNG skipped ({exc})")
 
 
 def process_video(video_id, video_path, verbose=True):
