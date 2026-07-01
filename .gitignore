@@ -1,8 +1,7 @@
 *.npy
 *.mp4
 *.avi
-data/raw/
-data/processed/
+data/
 results/
 __pycache__/
 *.pyc
