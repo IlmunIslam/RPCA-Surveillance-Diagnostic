@@ -1,12 +1,16 @@
-# RPCA Hybrid Compression Research
+# RPCA Surveillance Diagnostic Research
 
 ## Project Goal
-Empirical comparative study of RPCA-family decomposition methods for surveillance 
-video compression. Centerpiece contribution: a hybrid method combining Tensor RPCA's 
-L component with SS-RTD's N component.
+Diagnostic and stability study of tensor RPCA-family decomposition on surveillance 
+video. Not a new compression method and not a comparative benchmark. Main finding: 
+SS-RTD's three-component decomposition systematically collapses to two on surveillance 
+video (foreground goes entirely to one component, the other collapses to near-zero, in 
+all 180 videos), with the winning component set by the lambda ratio, not scene content.
+Supporting: Tensor RPCA background compresses ~6.8% better than H.264 (176/180); hybrid 
+recombination does NOT beat H.264 (0/180) — reported as a negative result.
 
 ## Target Publication
-IEEE Access or ICIP workshop paper.
+IEEE Access.
 
 ## Dataset
 180 VIRAT Ground 2.0 surveillance videos (videos-01 subset, scenes S_010000–S_010208)
@@ -14,10 +18,12 @@ Location: S:\works\Video compression Research\RPCA_Hybrid_Project\data\videos\
 Short ID mapping: see video_registry.csv — 180 videos confirmed, all ≥300 frames, 1280×720 @ 23.97fps
 Annotations: data\annotations\ — 343 .viratdata.objects.txt files covering all scenes
 
-## Methods Being Compared
-1. Tensor RPCA (Phase 2) — produces best L (temporally consistent background)
-2. SS-RTD (Phase 3) — produces best N (sparse movement carrier)
-3. Hybrid: Tensor RPCA L + SS-RTD N (main contribution)
+## Methods Run
+1. Tensor RPCA — low-rank tensor decomposition (background / foreground separation)
+2. SS-RTD — Smooth + Sparse + Residual Tensor Decomposition; subject of the collapse finding
+Hybrid recombination (Tensor RPCA L + SS-RTD N) is run only to test compressibility — it 
+is a negative result, not a contribution. Matrix RPCA and Chen (2012) are cited prior work, 
+NOT run.
 
 ## Key Technical Decisions
 - Frame cap: 300 frames (12 sec) per video. Videos shorter than 300 frames 
