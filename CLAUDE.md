@@ -50,4 +50,6 @@ NOT run.
 Pipeline run complete over all 180 videos. Core findings established: SS-RTD collapse 
 holds across all 180 (winner deterministic on lambda ratio); Tensor RPCA background beats 
 H.264 on 176/180 (~6.8%); hybrid recombination beats H.264 on 0/180. Lambda-ratio parameter 
-sweep done (100/100, zero exceptions). Phase: analysis / manuscript for IEEE Access.
+sweep done and verified complete (param_sweep.csv: 100/100 rows, 20 videos × 5 configs, 
+zero exceptions; no processes still running). Experiment fully complete — data collection 
+closed. Phase: analysis / manuscript for IEEE Access.
