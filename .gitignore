@@ -7,3 +7,8 @@ __pycache__/
 *.pyc
 .env
 logs/*.log
+
+# Reference papers — kept locally, not redistributed.
+# The SS-RTD source paper carries an IEEE republication/redistribution notice.
+# See paper/SOURCE.md for the citation.
+Robust_Tensor_Decomposition_Based_Background_Foreground_Separation_in_Noisy_Videos_and_Its_Applications_in_Additive_Manufacturing.pdf
