@@ -11,6 +11,33 @@
 - Log per-iteration residual, penalty (`beta`), and convergence from the start (fixes the
   missing-iteration-data problem).
 
+## Output contract (binding on Phase 3 — decided 2026-09-09)
+
+New runs MUST NOT write into the baseline's files or column names. The baseline
+results are frozen in `results/baseline_naive/` and backed up off-disk; see
+`ARCHIVE_BASELINE.md`.
+
+- **New filenames.** Real SS-RTD writes to `results/metrics/ssrtd_real_results.csv`
+  and `results/metrics/ssrtd_real_sweep.csv` — **never** to `all_results.csv` or
+  `param_sweep.csv`.
+- **Explicit `method` column** in every output row (e.g. `ssrtd_real`,
+  `naive_3comp`, `tensor_rpca`), so old and new rows stay distinguishable even if
+  they are ever concatenated.
+- **Do not reuse the `ssrtd_*` column prefix** for real-SS-RTD quantities. Those
+  names belong to the baseline's history. Real SS-RTD's components are `L`, `S`
+  (TV-smooth foreground) and `E` (sparse noise) — name the columns for those, not
+  for the baseline's `S`/`N`.
+- **Log per-iteration state** (`relChg` of `L`, `S`, `E`; `relErr` of `L`; both
+  penalties; iteration index) to a per-run file. Figures 3 and 4 of the Phase 5
+  plan and the unresolved `mu`-saturation question in `RESEARCH_LOG.md` §4 item 1
+  all depend on this existing.
+
+**Why this is a rule and not a preference:** `run_pipeline.py:206-209` and
+`param_sweep.py:110-111` both **append** — there is no dedupe on `video_id`. A
+Phase 3 run pointed at the old filenames would interleave new rows among the 180
+baseline rows under identical column names, with nothing in the data to separate
+them, and the contamination would be silent.
+
 ## Build order (each is a checkpoint — verify before moving on)
 
 ### (a) TV difference operators + Phi precompute — eq (4), (9)
