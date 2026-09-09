@@ -381,6 +381,55 @@ The paper asks a worthwhile question and the underlying phenomenon (parameter-dr
 
 ---
 
+## 5. Implementation deviations from the paper (Phase 1 build)
+
+Deviations forced during the faithful reimplementation of SS-RTD. Each one needs
+to be stated in the methodology section of the rewritten paper — a deviation that
+is not disclosed is the same class of error as the original mislabeling.
+
+1. 🔶 **The paper's rank rule is mathematically infeasible for non-square frames.**
+   *Found 2026-09-09 while building component (b); recorded 2026-09-10.*
+
+   Algorithm 1 and §III-C specify `r1 = ceil(0.8H)`, `r2 = ceil(0.8W)`, `r3 = 1`.
+   A Tucker multilinear rank triple is attainable only if
+   `r_k <= prod_{j != k} r_j`, because the mode-`k` unfolding of
+   `L = G x1 U1 x2 U2 x3 U3` is `U_k G_(k) (...)^T`, whose rank cannot exceed the
+   product of the other two ranks. **With `r3 = 1` this reduces to `r1 <= r2` and
+   `r2 <= r1`, i.e. `r1` must equal `r2`.** So the rule over-specifies `r2`
+   whenever `H != W`.
+
+   | Tensor | Paper asks for | Attainable |
+   |---|---|---|
+   | VIRAT, `180 x 320 x 300` | `(144, 256, 1)` | **`(144, 144, 1)`** |
+   | Paper's own Candela, `288 x 352 x 80` | `(231, 282, 1)` | **`(231, 231, 1)`** |
+
+   Intuitively: with `r3 = 1` every frame of `L` is a scalar multiple of one
+   `H x W` image, and that image has rank at most `min(r1, r2)`. `r2 = 256`
+   therefore describes nothing that `r2 = 144` does not already describe.
+
+   **What we do:** `src/ssrtd_real.py:feasible_ranks()` clamps the requested
+   triple to the attainable one and `hooi()` applies it internally.
+   `tucker_ranks()` still returns the paper's literal `(144, 256, 1)` so the
+   published rule stays visible in the code. Left unclamped, NumPy silently
+   returns a `320 x 144` factor when asked for `320 x 256` — same numbers, but
+   every downstream shape assumption is then wrong. Verified by
+   `src/test_hooi.py` (22/22 assertions).
+
+   **This is forced by mathematics, not chosen.** It does not change the
+   decomposition numerically. It needs one sentence in the methodology.
+
+2. 🔶 **`r3 = 1` makes frames proportional, not identical.** §III-C says r3 = 1
+   is chosen "so that each image frame in `L` is the same [41]". Strictly,
+   rank-1 in the temporal mode gives `frame_t = u3[t] * (one common image)` —
+   frames are scalar *multiples* of each other, identical only when `u3` is
+   constant. Measured frame-to-frame deviation on synthetic tests: **2.8e-2 to
+   6.3e-2**, i.e. not identical. Minor, but it means any claim that `L` has
+   literally constant frames is wrong; the correct statement is that `L` carries
+   a single spatial pattern with a time-varying scale. `src/test_hooi.py` asserts
+   the real invariant (mode-3 numerical rank 1) rather than literal equality.
+
+---
+
 ## Verification provenance
 
 Facts above were checked with, and are reproducible via:

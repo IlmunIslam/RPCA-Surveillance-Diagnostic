@@ -67,14 +67,50 @@ to 5.2e-16, i.e. machine epsilon.
 > on the very first iteration. Keep the identity term explicit, and assert
 > `denominator.min() > 0` when (c) is built.
 
-### (b) Tucker / HOOI low-rank solver for L — eq (3), (8)
+### (b) Tucker / HOOI low-rank solver for L — eq (3), (8) ✅ DONE 2026-09-10
 
 - Ranks `r1 = ceil(0.8H)`, `r2 = ceil(0.8W)`, `r3 = 1`.
 - Solve eq (8): `min ||X_tilde - G x1 U1 x2 U2 x3 U3||_F^2` s.t. orthogonal `Uj`, via HOOI
   (paper cites [13]; iterate ~20 inner iterations per the complexity note).
 - UNIT TEST: on a synthetic low-rank tensor, HOOI recovers it with small error. Confirm
-  `r3 = 1` makes every temporal slice of `L` identical (paper says "each image frame in L is
-  the same").
+  `r3 = 1` makes the temporal mode of `L` numerically **rank 1** — i.e. every frame is a
+  scalar multiple of one common image (`sigma2/sigma1` ~ 0).
+  > **Test wording corrected 2026-09-10.** This bullet originally said "makes every temporal
+  > slice of `L` identical", echoing the paper's "each image frame in L is the same". That is
+  > not the correct invariant: rank-1 in time gives `frame_t = u3[t] * (common image)`, so
+  > frames are *proportional*, identical only if `u3` is constant. Measured deviation on
+  > synthetic data was 2.8e-2 to 6.3e-2 — asserting literal identity would fail on correct
+  > code. See `RESEARCH_LOG.md` §5 item 2.
+
+**Status: verified 2026-09-10.** Built in `src/ssrtd_real.py` (`tucker_ranks`,
+`feasible_ranks`, `mode_dot`, `hosvd_init`, `tucker_core`, `tucker_reconstruct`,
+`hooi`); tests in `src/test_hooi.py`, run with `python -m src.test_hooi`. 22/22
+assertions pass across five tests: exact recovery (to 4.6e-16), rank-1 temporal
+mode, monotone objective decrease, factor orthogonality (to 2.4e-15), and the
+rank rule. Mode-2 updates use the Gram route; `unfold`/`fold` are imported from
+`tensor_rpca` rather than duplicated.
+
+> ⚠️ **The paper's rank rule is infeasible for non-square frames.** `r3 = 1`
+> forces `r1 = r2`, so `(144, 256, 1)` is unattainable and we clamp to
+> `(144, 144, 1)`. Forced by mathematics, not chosen; needs a methodology
+> sentence. Full reasoning in `RESEARCH_LOG.md` §5 item 1.
+
+**Timing decision (2026-09-10): implement the literal paper version; defer
+warm-starting until (g) exists.** Measured on one real VIRAT tensor
+(`180 x 320 x 300`, ranks `(144, 144, 1)`): HOSVD init 0.72 s, 20 HOOI
+iterations 12.33 s (0.62 s/iter), relative error 0.0897. Projected to the full
+Phase 3 run at the literal settings — 100 outer x 20 inner, no warm-starting —
+that is **~20.5 min per video and ~62 h for 180 videos**, HOOI alone, before the
+FFT solve, soft-thresholds and H.264 encoding.
+
+That is an **upper bound**: runs that stop early on the `1e-6` criterion cut it
+proportionally, and we do not yet know the real outer-iteration counts. Warm-
+starting `U_k` across outer iterations is the obvious lever and would plausibly
+cut inner iterations from 20 to 2-5 after the first outer pass (~6-15 h), but it
+is a deviation from Algorithm 1. **Decision: build (c)-(g) literally, measure
+actual outer-iteration counts on real data, then decide.** If warm-starting is
+adopted it goes in `RESEARCH_LOG.md` §5 as a documented deviation with a
+before/after comparison, not as a silent optimization.
 
 ### (c) S-update via 3D FFT — eq (9)
 
