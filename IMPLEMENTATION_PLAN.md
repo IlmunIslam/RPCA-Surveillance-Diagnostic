@@ -40,7 +40,7 @@ them, and the contamination would be silent.
 
 ## Build order (each is a checkpoint — verify before moving on)
 
-### (a) TV difference operators + Phi precompute — eq (4), (9)
+### (a) TV difference operators + Phi precompute — eq (4), (9) ✅ DONE 2026-09-09
 
 - Implement `Dh`, `Dv`, `Dt`: forward differences along height, width, time, with PERIODIC
   boundary conditions (paper states periodic).
@@ -49,6 +49,23 @@ them, and the contamination would be silent.
 - UNIT TEST: verify `D*` is the true adjoint of `D` (inner-product test:
   `<D x, y> == <x, D* y>` within numerical tolerance). Verify `Phi` matches applying the
   operators directly on a small random tensor.
+
+**Status: verified 2026-09-09.** Built in `src/ssrtd_real.py` (`tv_forward`,
+`tv_adjoint`, `tv_norm`, `compute_phi`); tests in `src/test_tv_operators.py`,
+run with `python -m src.test_tv_operators`. 20/20 assertions pass across four
+tests — the two required by this plan plus a constant-maps-to-zero check
+(catches non-periodic edges) and a hand-checked ramp case (pins difference
+direction and axis mapping). Adjoint identity holds to 1.3e-16, `Phi`-vs-direct
+to 5.2e-16, i.e. machine epsilon.
+
+> ⚠️ **Carry-forward warning for component (c): `Phi` has a zero eigenvalue.**
+> Measured `Phi.min() == 0.0` on every shape tested. This is correct — `D*D`
+> annihilates constants, so the DC bin eigenvalue is exactly zero. The eq. (9)
+> denominator is `beta_X * 1 + beta_f * Phi`, and **the `beta_X * 1` term is the
+> only thing keeping that denominator non-zero at DC**. Dropping it, or writing
+> `beta_f * Phi` alone, divides by zero at the DC bin and puts inf/nan into `S`
+> on the very first iteration. Keep the identity term explicit, and assert
+> `denominator.min() > 0` when (c) is built.
 
 ### (b) Tucker / HOOI low-rank solver for L — eq (3), (8)
 
