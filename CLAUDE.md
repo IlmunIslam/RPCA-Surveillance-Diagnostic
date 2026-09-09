@@ -14,7 +14,7 @@ IEEE Access.
 
 ## Dataset
 180 VIRAT Ground 2.0 surveillance videos (videos-01 subset, scenes S_010000–S_010208)
-Location: S:\works\Video compression Research\RPCA_Hybrid_Project\data\videos\
+Location: data\videos\ (relative to the repo root)
 Short ID mapping: see video_registry.csv — 180 videos confirmed, all ≥300 frames, 1280×720 @ 23.97fps
 Annotations: data\annotations\ — 343 .viratdata.objects.txt files covering all scenes
 
@@ -43,7 +43,12 @@ NOT run.
 ## Prior Work Done
 - Phases 1-3 implemented and tested on Sample 1 (one VIRAT video, 150 frames)
 - Bug identified: old runs used 150 frames → 6 sec output instead of 12 sec
-- All old results are in S:\works\Video compression Research\RPCA_Project\ (backup, do not delete)
+- ⚠️ This file previously claimed old results were backed up in
+  `S:\works\Video compression Research\RPCA_Project\ (backup, do not delete)`.
+  **Verified 2026-09-09: that folder does not exist on any drive (C, D, E, P).**
+  The `S:` drive itself no longer exists. Those pre-VIRAT 150-frame results are
+  gone; they are superseded by the current 180-video batch, so nothing needed for
+  the paper is lost. Do not treat that path as a backup.
 - New clean run starts from scratch in this project folder
 
 ## Current Status

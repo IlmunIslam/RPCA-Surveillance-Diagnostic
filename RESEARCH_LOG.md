@@ -4,8 +4,9 @@
 > tagged with the file:line or data file it was verified against. If a statement
 > here has no source tag, treat it as unverified.
 >
-> Created 2026-08-29. Repo root: `RPCA_Hybrid_Project/` (the git repo root; the
-> parent folder `Video compression Research/` is *not* under version control).
+> Created 2026-08-29. Repo root: `RPCA_Surveillance_Diagnostic/` (renamed from
+> `RPCA_Hybrid_Project/` on 2026-09-09 to match the GitHub repo name; the parent
+> folder `Video compression Research/` is *not* under version control).
 
 ---
 

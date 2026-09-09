@@ -51,7 +51,7 @@ processed at **320×180 grayscale**.
 ## Repository Structure
 
 ```
-RPCA_Hybrid_Project/
+RPCA_Surveillance_Diagnostic/
 ├── src/                  # Core Python modules
 │   ├── preprocessing.py  # Frame extraction and downsampling
 │   ├── tensor_rpca.py    # Tensor RPCA implementation

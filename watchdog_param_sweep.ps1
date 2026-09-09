@@ -4,11 +4,13 @@
 # - If no param_sweep process is running and the sweep isn't complete, relaunches it detached.
 # - Exits cleanly once param_sweep.csv holds all TARGET rows.
 # - Gives up (no crash-loop) if repeated relaunches make no progress.
-# Launch this itself detached:
+# Launch this itself detached (adjust the path to wherever the repo lives):
 #   Start-Process powershell -ArgumentList '-NoProfile','-ExecutionPolicy','Bypass','-File',
-#     'S:\works\Video compression Research\RPCA_Hybrid_Project\watchdog_param_sweep.ps1' -WindowStyle Hidden
+#     'E:\works\Video compression Research\RPCA_Surveillance_Diagnostic\watchdog_param_sweep.ps1' -WindowStyle Hidden
 
-$proj   = "S:\works\Video compression Research\RPCA_Hybrid_Project"
+# Resolve the project root from this script's own location, so the watchdog keeps
+# working if the repo is moved or the folder renamed.
+$proj   = $PSScriptRoot
 $csv    = Join-Path $proj "results\metrics\param_sweep.csv"
 $wlog   = Join-Path $proj "logs\watchdog.log"
 $target = 100          # 20 videos x 5 configs
