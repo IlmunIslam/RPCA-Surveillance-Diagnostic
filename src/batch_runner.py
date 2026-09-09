@@ -14,7 +14,7 @@ from pathlib import Path
 import pandas as pd
 
 PROJECT_DIR = Path(__file__).parent.parent
-VIDEO_DIR = r"S:\works\Video compression Research\RPCA_Hybrid_Project\data\videos"
+VIDEO_DIR = str(PROJECT_DIR / "data" / "videos")
 REGISTRY = PROJECT_DIR / "video_registry.csv"
 METRICS_CSV = PROJECT_DIR / "results" / "metrics" / "all_results.csv"
 LOG_FILE = PROJECT_DIR / "logs" / "batch_run.log"

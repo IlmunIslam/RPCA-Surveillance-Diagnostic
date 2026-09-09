@@ -22,7 +22,7 @@ from src.ssrtd import ssrtd
 from src.metrics import compute_sparsity
 
 PROJECT_DIR = Path(__file__).parent.parent
-VIDEO_DIR = Path(r"S:\works\Video compression Research\RPCA_Hybrid_Project\data\videos")
+VIDEO_DIR = PROJECT_DIR / "data" / "videos"
 REGISTRY = PROJECT_DIR / "video_registry.csv"
 ALL_RESULTS_CSV = PROJECT_DIR / "results" / "metrics" / "all_results.csv"
 SWEEP_CSV = PROJECT_DIR / "results" / "metrics" / "param_sweep.csv"

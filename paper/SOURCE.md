@@ -5,7 +5,8 @@ The algorithm this project takes as its baseline is **SS-RTD**, published as:
 > B. Shen, R. R. Kamath, H. Choo, and Z. (James) Kong,
 > "Robust Tensor Decomposition based Background/Foreground Separation in
 > Noisy Videos and Its Applications in Additive Manufacturing,"
-> *IEEE Transactions on Automation Science and Engineering*, 2022.
+> *IEEE Transactions on Automation Science and Engineering*,
+> vol. 20, no. 1, pp. 583-596, 2022.
 > DOI: [10.1109/TASE.2022.3163674](https://doi.org/10.1109/TASE.2022.3163674)
 
 ```bibtex
@@ -14,6 +15,9 @@ The algorithm this project takes as its baseline is **SS-RTD**, published as:
   title   = {Robust Tensor Decomposition based Background/Foreground Separation
              in Noisy Videos and Its Applications in Additive Manufacturing},
   journal = {IEEE Transactions on Automation Science and Engineering},
+  volume  = {20},
+  number  = {1},
+  pages   = {583--596},
   year    = {2022},
   doi     = {10.1109/TASE.2022.3163674}
 }

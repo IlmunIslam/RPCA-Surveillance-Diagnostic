@@ -48,8 +48,9 @@ def load_registry(registry_path):
 
 
 if __name__ == "__main__":
-    REGISTRY = Path(r"S:\works\Video compression Research\RPCA_Hybrid_Project\video_registry.csv")
-    VIDEO_DIR = Path(r"S:\works\Video compression Research\CCTV 01")
+    PROJECT_DIR = Path(__file__).parent.parent
+    REGISTRY = PROJECT_DIR / "video_registry.csv"
+    VIDEO_DIR = PROJECT_DIR / "data" / "videos"
 
     df = load_registry(REGISTRY)
     first = df.iloc[0]

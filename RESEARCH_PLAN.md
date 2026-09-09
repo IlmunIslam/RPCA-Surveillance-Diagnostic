@@ -49,6 +49,37 @@ motivating why the TV smoothness term matters.
   add per-iteration logging so convergence/iteration cost is recoverable).
 - **Phase 5:** rewrite paper around real results, in the author's own voice, section by section.
 
+## Figures and visuals plan (for Phase 5)
+
+Our paper TESTS SS-RTD's domain transfer (smooth X-ray foreground to sharp surveillance
+foreground). We do NOT propose SS-RTD, so we need far fewer figures than Shen et al.
+
+Essential figures:
+
+1. **Pipeline figure** — already have it; update for new framing.
+2. **DECOMPOSITION EXAMPLE (centerpiece)** — a sample VIRAT frame decomposed by real
+   SS-RTD: original, `L` (background), `S` (smooth foreground), `E` (noise) side by side.
+   Shows the main finding visually.
+3. **CONVERGENCE PLOT (our Fig. 3 equivalent)** — real SS-RTD's relative change vs
+   iteration on surveillance video. Proves the implementation runs correctly.
+4. **LAMBDA SENSITIVITY** — decomposition behavior across `lambda` in [0.2, 1]. The
+   scientifically meaningful replacement for the old two-parameter sweep.
+5. **SMOOTH-VS-SHARP COMPARISON (most compelling)** — real SS-RTD on a smooth dataset
+   (Candela) beside real SS-RTD on a sharp VIRAT video. Visualizes the domain-transfer
+   question directly.
+6. **BASELINE COMPARISON** — real SS-RTD (with TV) vs the naive no-TV three-component
+   method. Shows what the TV smoothness term does.
+
+Tables:
+
+- Real PSNR/SSIM against proper reconstruction (fixes the meaningless 217 dB).
+- Lambda behavior.
+- Compression, reframed to emphasize the hybrid negative result.
+
+We do NOT need: multi-benchmark comparison tables, F-measure foreground-detection tables,
+multi-noise-ratio sweeps, or 100-tuning-set boxplots. We characterize behavior on a new
+domain, not superiority over other methods.
+
 ## Discipline (non-negotiable)
 
 - Nothing is "done" until verified against the paper's equations (`paper/SOURCE.md`) or the

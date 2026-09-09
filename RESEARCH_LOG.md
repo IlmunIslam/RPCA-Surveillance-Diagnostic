@@ -344,8 +344,25 @@ The paper asks a worthwhile question and the underlying phenomenon (parameter-dr
 7. **Replace or relabel the tautological PSNR/SSIM columns** (§1). Reporting
    217 dB as a quality result would not survive review.
 
-8. **Confirm the compression result** (§3.1 caveat) — hybrid appears to encode
-   larger than the plain H.264 reference.
+8. ~~**Confirm the compression result.**~~ **RESOLVED 2026-09-08 — not a bug, a
+   reported negative finding.** The §3.1 caveat flagged that `hybrid_kb` exceeds
+   `original_comp_kb` in spot-checked rows (video_02: 100.57 vs 56.43 KB) and
+   asked whether the `hybrid_compression_ratio` denominator was wrong. It is not.
+   The manuscript (`An_empirical_Study_on_VIRAT.pdf`, §IV-C and Table III) states
+   this openly as a result: the hybrid **never** beats H.264 — 0/180 videos, and
+   it runs **1.35x to 1.87x larger than baseline, mean 1.55x**. The spot-check
+   ratio (100.57 / 56.43 = 1.78x) sits inside that reported range, so the data,
+   the code and the paper agree. Nothing to fix.
+
+   Two things this does *not* settle, kept here so they are not lost:
+   `src/compression.py` is still unaudited, so the exact denominator behind the
+   `hybrid_compression_ratio` median of **0.4773** remains unconfirmed — and a
+   median *below* 1 reads as "smaller than reference", the opposite of the
+   reported finding. That column is therefore probably measuring something other
+   than hybrid-vs-baseline and should not be quoted until checked. Separately,
+   the §2 reviewer critique rates this negative result the paper's *strongest*
+   finding while noting it gets less emphasis than the weaker L-vs-H.264 claim —
+   a Phase 5 framing issue, not a correctness one.
 
 9. **Propagate the item-1 correction to every artifact that carries the label.**
    At minimum: the manuscript, `README.md`, `CLAUDE.md` (line 23 "SS-RTD — Smooth +
