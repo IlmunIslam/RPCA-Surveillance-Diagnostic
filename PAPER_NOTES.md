@@ -101,6 +101,38 @@
    *[`src/ssrtd_real.py:primal_residuals`; `src/test_multipliers.py` test 1;
    paper eq. (14) and the sentence introducing it]*
 
+14. 🔴 **ALGORITHM 1'S STOPPING RULE HALTS AFTER ONE ITERATION IF TAKEN
+   LITERALLY.** *Rigor finding — the third defect found in the source algorithm.*
+
+   Algorithm 1 stops when `||E_t - E_{t-1}||_F / max{1, ||E_{t-1}||_F} <= 1e-6`.
+   `E` is initialized to 0 ("Other variables are initialized by 0"), and **the
+   first E-update also returns exactly 0**, because the eq. (12) threshold
+   `2/beta_X = 2 * mean(X) / 4e-1 = 5 * mean(X)` exceeds the initial residual
+   `|X - L - S|`. The stopping measure is then `0 / max{1, 0} = 0 <= 1e-6`, and
+   the loop exits after a single iteration having accomplished nothing.
+
+   **Scale-invariant.** `beta_X` is defined as `4e-1/mean(X)`, so the threshold
+   scales with the data and the degeneracy survives any normalization — it is not
+   an artifact of our `[0,1]` frames. Observed identically on clean and
+   10%-impulse-noise synthetic inputs.
+
+   **The algorithm is fine; the criterion is the defect.** `beta_X` grows under
+   eq. (14), the threshold shrinks, and `E` becomes nonzero after a few
+   iterations, after which the measure is meaningful. Confirmed by running past
+   it: `err_X` fell 7.63 -> 0.53 over 60 iterations while `beta_X` rose
+   0.72 -> 27.4 on exactly the stalled iterations.
+
+   **What we do:** the relative change of an identically-zero sequence carries no
+   information, so the convergence test is **skipped while `||E_{t-1}||_F = 0`**.
+   If `E` never becomes nonzero the loop runs to `max_iter` and reports
+   `converged = False`. One rule, minimal, documented in the code as ambiguity 3.
+
+   **Any faithful reimplementation hits this on the first run.** One methodology
+   sentence, and a strong illustration of why the verification discipline
+   mattered.
+   *[`src/ssrtd_real.py:ssrtd_real` ambiguity 3; `src/test_ssrtd_real.py` test 3
+   (c)]*
+
 3. **IMPLEMENTATION FAITHFULNESS.** State that we implemented real SS-RTD
    faithfully from Shen et al. 2022 — Tucker/HOOI for `L`, anisotropic TV for
    `S`, L1 for noise `E`, a single `lambda`, and adaptive ADMM penalties — and

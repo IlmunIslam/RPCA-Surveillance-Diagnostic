@@ -259,7 +259,23 @@ videos** at literal settings, above the ~90-95 h extrapolated at (c).
 Note `primal_residuals` recomputes `tv_forward(S)`, which the f-update already
 built. Threading it through at (g) saves ~1 s and ~400 MB per iteration.
 
-### (g) Assemble full ADMM — Algorithm 1
+### (g) Assemble full ADMM — Algorithm 1 — (g1) ✅ DONE 2026-09-13 · (g2) gate PENDING
+
+**(g1) status: verified 2026-09-13.** Built as `ssrtd_real` in
+`src/ssrtd_real.py`; tests in `src/test_ssrtd_real.py`. 24/24 assertions across
+six tests (initialization, reconstruction, convergence/stopping, synthetic
+recovery, determinism/parameters, logging). 162 assertions across all seven
+suites. `factor`, `warm_start` and `log` are parameters; `Phi` is hoisted out of
+the loop; returns a dict; logs the 14 Output Contract fields per iteration.
+
+Three ambiguities in Algorithm 1 are resolved explicitly in the code:
+1. `f` is initialized to **0**, not `D vec(S)` — "other variables initialized by 0".
+2. The first iteration is forced, since `E_{t-1}` does not exist before it.
+3. 🔴 **The literal stopping rule halts after one iteration** — `E_0 = E_1 = 0`
+   gives relative change 0. The test is skipped while `||E_{t-1}||_F = 0`.
+   Scale-invariant; `PAPER_NOTES.md` item 14.
+
+**(g2), the verification gate, is still required before any VIRAT run.**
 
 - Init: `L` via `(r1,r2,r3)`-Tucker of `X`; `S = X - L`; `beta_f = 1e+1/mean(X)`;
   `beta_X = 4e-1/mean(X)`; all other vars `0`.

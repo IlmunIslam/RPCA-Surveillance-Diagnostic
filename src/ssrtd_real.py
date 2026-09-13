@@ -20,8 +20,10 @@ Build status (see IMPLEMENTATION_PLAN.md):
     (d) f-update (TV auxiliary)                    -- this file, below
     (e) E-update (sparse noise)                    -- this file, below
     (f) Multiplier + adaptive penalty updates      -- this file, below
-    (g) Full ADMM assembly (Algorithm 1)           -- not yet built
+    (g) Full ADMM assembly (Algorithm 1)           -- this file, below
 """
+
+import time
 
 import numpy as np
 
@@ -255,7 +257,7 @@ def tucker_reconstruct(G, Us):
     return L
 
 
-def hooi(X, ranks=None, n_iter=20, return_history=False):
+def hooi(X, ranks=None, n_iter=20, return_history=False, init_Us=None):
     """
     Solve eq. (8) by higher-order orthogonal iteration.
 
@@ -276,7 +278,14 @@ def hooi(X, ranks=None, n_iter=20, return_history=False):
     # (see feasible_ranks). Clamp so factor shapes are what they claim to be.
     ranks = feasible_ranks(X.shape, ranks)
 
-    Us = hosvd_init(X, ranks)
+    # init_Us warm-starts from a previous solve. Algorithm 1 does not do this --
+    # it is a deviation, off by default, and only enabled via ssrtd_real's
+    # warm_start flag after being measured. See IMPLEMENTATION_PLAN.md (g).
+    if init_Us is not None and all(
+            init_Us[k].shape == (X.shape[k], ranks[k]) for k in range(3)):
+        Us = [U.copy() for U in init_Us]
+    else:
+        Us = hosvd_init(X, ranks)
     normX2 = float(np.sum(X * X))
     history = []
 
@@ -584,3 +593,182 @@ def update_penalty(beta, err_new, err_prev, c1=C1, c2=C2):
     """
     grew = bool(err_new >= c2 * err_prev)
     return (c1 * beta if grew else beta), grew
+
+
+# ===========================================================================
+# (g) Full ADMM assembly -- Algorithm 1
+# ===========================================================================
+#
+#   Input: X; parameter lambda.
+#   Init:  r1,r2,r3 as above; L from (r1,r2,r3)-Tucker of X; S = X - L;
+#          beta_f = 1e+1/mean(X), beta_X = 4e-1/mean(X);
+#          all other variables 0.
+#   Loop:  L via (8); S via (9); f via (11); E via (12); multipliers and
+#          penalties via (13), (14).
+#   Stop:  ||E_t - E_{t-1}||_F / max{1, ||E_{t-1}||_F} <= 1e-6, or iter > 100.
+#
+# TWO AMBIGUITIES IN ALGORITHM 1, RESOLVED EXPLICITLY.
+#
+# 1. `f` is initialized to ZERO, not to D vec(S). The paper says "Other
+#    variables are initialized by 0", and f is one of them. Seeding
+#    f = D vec(S) is the helpful-looking thing to do and is NOT what is
+#    written; it would also make the first f-residual identically zero.
+#
+# 2. The stopping test compares E_t with E_{t-1}, neither of which exists
+#    before the first iteration. Taken literally with E initialized to 0, the
+#    relative change would be 0 and the loop would never execute. We force the
+#    first iteration (relative change starts at infinity), which is the only
+#    reading under which the algorithm runs at all.
+#
+# 3. THE STOPPING RULE TERMINATES AFTER ONE ITERATION IF TAKEN LITERALLY.
+#    E is initialized to 0, and the first E-update also returns exactly 0,
+#    because the threshold 2/beta_X = 2*mean(X)/4e-1 = 5*mean(X) is far larger
+#    than the initial residual |X - L - S|. The stopping measure is then
+#    ||E_1 - E_0||_F / max{1, ||E_0||_F} = 0 / 1 = 0 <= 1e-6, so Algorithm 1
+#    halts after a single iteration having accomplished nothing.
+#
+#    This is scale-invariant -- beta_X is defined as 4e-1/mean(X), so the
+#    threshold scales with the data and the degeneracy survives any
+#    normalization. It is not an artifact of our [0,1] frames.
+#
+#    The algorithm is fine; the criterion is. beta_X grows under eq. (14), the
+#    threshold shrinks, and E becomes nonzero after a few iterations, after
+#    which the measure is meaningful. So: the relative change of an identically
+#    zero sequence carries no information, and we do not treat it as
+#    convergence. The test is skipped while ||E_{t-1}||_F == 0. If E never
+#    becomes nonzero the loop simply runs to max_iter and reports
+#    converged=False, which is the honest outcome.
+#
+#    Recorded in PAPER_NOTES.md; it is a reproducible defect in the published
+#    algorithm that any faithful reimplementation hits immediately.
+
+
+def ssrtd_real(X, lam, max_iter=100, tol=1e-6, factor=E_THRESHOLD_FACTOR,
+               hooi_iters=20, warm_start=False, log=True, verbose=False,
+               L_true=None):
+    """
+    Smooth Sparse Robust Tensor Decomposition -- Shen et al. 2022, Algorithm 1.
+
+    X          : (H, W, T) array, the noisy video
+    lam        : the single tuning parameter lambda; the paper recommends [0.2, 1]
+    max_iter   : outer iterations (paper: 100)
+    tol        : relative-change stopping threshold on E (paper: 1e-6)
+    factor     : E-threshold numerator. 2.0 as eq. (12) prints; 1.0 is what
+                 Appendix A's eq. (17) implies. See PAPER_NOTES.md item 11.
+    hooi_iters : inner HOOI iterations (paper: 20)
+    warm_start : reuse the previous iteration's Tucker factors. NOT in
+                 Algorithm 1 -- a deviation, off by default.
+    L_true     : optional ground-truth background, enabling relErr_L in the log
+                 (used by the verification gate to reproduce the paper's Fig. 3)
+
+    -> dict with L, S, E, G, Us, f, mult_f, mult_X, beta_f, beta_X, ranks,
+       n_iter, converged, history
+    """
+    X = np.asarray(X, dtype=np.float64)
+    if np.ndim(lam) != 0:
+        raise ValueError(f"lam must be a scalar (got shape {np.shape(lam)}).")
+    shape = X.shape
+
+    mean_X = float(np.mean(X))
+    if mean_X == 0:
+        raise ValueError("mean(X) is zero; the paper's beta initialization "
+                         "1e+1/mean(X), 4e-1/mean(X) is undefined.")
+
+    # --- initialization, exactly as Algorithm 1 prints it -------------------
+    ranks = tucker_ranks(shape)
+    G, Us, L = hooi(X, ranks, n_iter=hooi_iters)        # Tucker of X, not X_tilde
+    S = X - L
+    E = np.zeros(shape)                                 # "other variables ... 0"
+    mult_X = np.zeros(shape)
+    f = np.zeros((3,) + shape)                          # zero, NOT D vec(S)
+    mult_f = np.zeros((3,) + shape)
+    beta_f = 1e+1 / mean_X
+    beta_X = 4e-1 / mean_X
+
+    phi = compute_phi(shape)        # depends only on shape -- computed once
+    ranks_eff = feasible_ranks(shape, ranks)
+
+    err_f_prev = err_X_prev = np.inf
+    rel_chg = np.inf                # forces the first iteration; see note above
+    history = []
+    n_iter = 0
+    converged = False
+
+    while rel_chg > tol and n_iter < max_iter:
+        t0 = time.perf_counter()
+        L_prev, S_prev, E_prev = L, S, E
+
+        # line 2: L via (8), on X_tilde = X - S - E - Lambda_X/beta_X
+        X_tilde = X - S - E - mult_X / beta_X
+        G, Us, L = hooi(X_tilde, ranks, n_iter=hooi_iters,
+                        init_Us=Us if warm_start else None)
+
+        # line 3: S via (9)
+        S = update_S(X, L, E, mult_X, f, mult_f, beta_X, beta_f, phi=phi)
+
+        # line 4: f via (11), anisotropic TV
+        f = update_f(S, mult_f, lam, beta_f)
+
+        # line 5: E via (12)
+        E = update_E(X, L, S, mult_X, beta_X, factor=factor)
+
+        # line 6: multipliers via (13), then penalties via (14)
+        err_f, err_X = primal_residuals(f, S, X, L, E)
+        mult_f, mult_X = update_multipliers(mult_f, mult_X, f, S, X, L, E,
+                                            beta_f, beta_X)
+        beta_f, grew_f = update_penalty(beta_f, err_f, err_f_prev)
+        beta_X, grew_X = update_penalty(beta_X, err_X, err_X_prev)
+        err_f_prev, err_X_prev = err_f, err_X
+        n_iter += 1
+
+        rel_chg = _rel_change(E, E_prev)
+        # Ambiguity 3: while E has never been nonzero, the relative change is
+        # identically 0 and carries no information. Do not call that convergence.
+        e_prev_norm = float(np.linalg.norm(E_prev.ravel()))
+        if rel_chg <= tol and e_prev_norm > 0.0:
+            converged = True
+        elif rel_chg <= tol:
+            rel_chg = np.inf        # keep iterating; E is still identically zero
+
+        if log:
+            row = {
+                "iter": n_iter,
+                "relChg_L": _rel_change(L, L_prev),
+                "relChg_S": _rel_change(S, S_prev),
+                "relChg_E": rel_chg,
+                "relErr_L": (_rel_error(L, L_true) if L_true is not None
+                             else float("nan")),
+                "err_f": err_f,
+                "err_X": err_X,
+                "beta_f": beta_f,
+                "beta_X": beta_X,
+                "beta_f_grew": grew_f,
+                "beta_X_grew": grew_X,
+                "obj_E_l1": float(np.abs(E).sum()),
+                "obj_S_tv1": float(lam * tv_norm(S)),
+                "seconds": time.perf_counter() - t0,
+            }
+            history.append(row)
+            if verbose:
+                print(f"  iter {row['iter']:3d}  relChg_E {row['relChg_E']:.3e}  "
+                      f"err_X {row['err_X']:.4f}  beta_X {row['beta_X']:.4f}"
+                      f"{' +' if grew_X else '  '}  {row['seconds']:.2f}s")
+
+    return {"L": L, "S": S, "E": E, "G": G, "Us": Us, "f": f,
+            "mult_f": mult_f, "mult_X": mult_X,
+            "beta_f": beta_f, "beta_X": beta_X,
+            "ranks": ranks, "ranks_effective": ranks_eff,
+            "lam": float(lam), "factor": float(factor),
+            "n_iter": n_iter, "converged": converged, "history": history}
+
+
+def _rel_change(A, A_prev):
+    """||A - A_prev||_F / max{1, ||A_prev||_F} -- Algorithm 1's stopping measure."""
+    return float(np.linalg.norm((A - A_prev).ravel())
+                 / max(1.0, float(np.linalg.norm(np.asarray(A_prev).ravel()))))
+
+
+def _rel_error(A, A_true):
+    """||A - A_true||_F / max{1, ||A_true||_F} -- the paper's relErr, section IV-A."""
+    return float(np.linalg.norm((A - A_true).ravel())
+                 / max(1.0, float(np.linalg.norm(np.asarray(A_true).ravel()))))
