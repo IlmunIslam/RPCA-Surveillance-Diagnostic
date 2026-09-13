@@ -16,7 +16,7 @@ SS-RTD and not a variant of it. See ARCHIVE_BASELINE.md.
 Build status (see IMPLEMENTATION_PLAN.md):
     (a) TV difference operators + Phi precompute   -- this file, below
     (b) Tucker / HOOI low-rank solver for L        -- this file, below
-    (c) S-update via 3D FFT                        -- not yet built
+    (c) S-update via 3D FFT                        -- this file, below
     (d) f-update (TV auxiliary)                    -- not yet built
     (e) E-update (sparse noise)                    -- not yet built
     (f) Multiplier + adaptive penalty updates      -- not yet built
@@ -299,3 +299,70 @@ def hooi(X, ranks=None, n_iter=20, return_history=False):
     if return_history:
         return G, Us, L, history
     return G, Us, L
+
+
+# ===========================================================================
+# (c) S-update via 3D FFT -- eq. (9)
+# ===========================================================================
+#
+# Setting the gradient of the augmented Lagrangian w.r.t. S to zero gives
+#
+#   (beta_X I + beta_f D*D) vec(S)
+#     = beta_X ( vec(X) - vec(L) - vec(E) ) - vec(Lambda_X) + D*(beta_f f - lambda_f)
+#
+# with right-hand side C = beta_X (X - L - E) - Lambda_X + ten(D*(beta_f f - lambda_f)).
+# D*D is block-circulant, so it is diagonalized by the 3D DFT and S follows in
+# closed form:
+#
+#   S = ifftn( fftn(C) / (beta_X * 1 + beta_f * Phi) )                    (9)
+
+
+def update_S(X, L, E, mult_X, f, mult_f, beta_X, beta_f, phi=None,
+             return_info=False):
+    """
+    Closed-form S-update, eq. (9).
+
+    X, L, E, mult_X : (H, W, T)      -- data, low-rank, sparse, and Lambda_X
+    f, mult_f       : (3, H, W, T)   -- TV auxiliary and its multiplier lambda_f
+    beta_X, beta_f  : positive scalars
+    phi             : (H, W, T) from compute_phi; computed here if omitted, but
+                      the paper notes it "only needs to be calculated once in the
+                      whole algorithm", so hoist it out of the ADMM loop.
+    -> S, or (S, info) when return_info
+
+    Sign convention cross-checks against eq. (8): beta_X(X - L - E) - Lambda_X
+    equals beta_X * (X - L - E - Lambda_X/beta_X), and X_tilde in eq. (8) is
+    X - S - E - Lambda_X/beta_X. Same convention, so a sign slip here would
+    contradict (8) rather than merely look wrong.
+    """
+    X = np.asarray(X, dtype=np.float64)
+    if phi is None:
+        phi = compute_phi(X.shape)
+
+    C = beta_X * (X - L - E) - mult_X + tv_adjoint(beta_f * f - mult_f)
+
+    # Phi has a zero eigenvalue at the DC bin -- D*D annihilates constants -- so
+    # the beta_X * 1 identity term is the only thing keeping this denominator
+    # non-zero there. Dropping it puts inf/nan into S on the first iteration.
+    denom = beta_X + beta_f * phi
+    denom_min = float(denom.min())
+    if not denom_min > 0:
+        raise ValueError(
+            f"eq. (9) denominator is not strictly positive (min={denom_min!r}). "
+            f"beta_X must be > 0: Phi vanishes at the DC bin, so beta_X * 1 is "
+            f"what keeps beta_X * 1 + beta_f * Phi invertible."
+        )
+
+    S_complex = np.fft.ifftn(np.fft.fftn(C) / denom)
+    S = S_complex.real
+
+    if return_info:
+        scale = max(float(np.abs(S).max()), 1.0)
+        return S, {
+            "denom_min": denom_min,
+            "denom_max": float(denom.max()),
+            "max_imag": float(np.abs(S_complex.imag).max()),
+            "max_imag_rel": float(np.abs(S_complex.imag).max()) / scale,
+            "C": C,
+        }
+    return S

@@ -112,13 +112,42 @@ actual outer-iteration counts on real data, then decide.** If warm-starting is
 adopted it goes in `RESEARCH_LOG.md` §5 as a documented deviation with a
 before/after comparison, not as a silent optimization.
 
-### (c) S-update via 3D FFT — eq (9)
+### (c) S-update via 3D FFT — eq (9) ✅ DONE 2026-09-13
 
 - Build `C = beta_X*(X - L - E) - Lambda_X + ten(D*(beta_f*f - lambda_f))`.
 - `S = ifftn( fftn(C) / (beta_X * 1 + beta_f * Phi) )`.
 - UNIT TEST: verify the FFT solve satisfies the linear system
   `(beta_X I + beta_f D*D) vec(S) = RHS` to numerical tolerance, by plugging the result back
   in.
+
+**Status: verified 2026-09-13.** Built as `update_S` in `src/ssrtd_real.py`;
+tests in `src/test_s_update.py`, run with `python -m src.test_s_update`. 21/21
+assertions across five tests: linear-system residual (2.6e-16), DC bin against
+the closed form `C/beta_X`, real output, `beta_f = 0` degeneration, and the sign
+convention cross-checked against the eq. (8) form of `X_tilde`.
+
+The (a) DC warning is consumed as planned: `update_S` asserts
+`denom.min() > 0` and raises with an explanatory message when `beta_X = 0`,
+rather than emitting inf/nan. Measured `Phi.min() = 0.0` and
+`denom.min() == beta_X` exactly, on every shape.
+
+**Measured on one real VIRAT tensor (`180 x 320 x 300`, float64):**
+`compute_phi` 7.77 s once; `update_S` **6.33 s/call**; **peak working set
+2,840 MB** against 8 GB of RAM.
+
+> ⚠️ **Two carry-forward items for (g).**
+> 1. **Memory.** 2.84 GB is the peak for the S-update *alone*. The full ADMM
+>    holds `X, L, S, E, Lambda_X, f, lambda_f` simultaneously plus HOOI factors
+>    and FFT temporaries. Levers, in order: `rfftn`/`irfftn` (cuts complex
+>    temporaries, no precision cost, but `Phi` must be rebuilt on the
+>    half-spectrum and (a) re-tested), then float32 (halves everything, but our
+>    tests assert at 1e-12 and float32 reaches ~1e-7, uncomfortably close to the
+>    paper's 1e-6 stopping criterion). Measure the real peak at (g) before
+>    choosing either.
+> 2. **Revised timing.** `update_S` at 6.33 s/call against HOOI's 12.33 s per 20
+>    inner iterations makes the FFT solve about a third of the per-outer-iteration
+>    cost. The ~62 h figure recorded under (b) covered HOOI only; including (c)
+>    the literal-settings estimate is **~90-95 h for 180 videos**.
 
 ### (d) f-update (TV auxiliary) — eq (11)
 
