@@ -133,6 +133,39 @@
    *[`src/ssrtd_real.py:ssrtd_real` ambiguity 3; `src/test_ssrtd_real.py` test 3
    (c)]*
 
+15. 🔴 **THE PRINTED PSNR FORMULA OMITS THE DIVISION BY PIXEL COUNT.**
+   *Rigor finding — the fourth internal inconsistency found in the source paper.*
+
+   §IV defines, as printed (verified against the rendered page):
+   `PSNR = 10 * log10( 255^2 / ||I - I_hat||_F^2 )`, with `I` and `I_hat` the
+   original and recovered background, averaged over all frames. The squared
+   Frobenius norm **sums** the error over every pixel and is never divided by the
+   pixel count, so this is not the standard per-pixel-averaged PSNR.
+
+   **The reported numbers only fit the standard definition.** For a `288 x 352`
+   frame, the literal formula sits `10 * log10(101,376) ≈ 50 dB` below standard
+   PSNR. Table I reports SS-RTD at **43.27 dB** on Candela with 10% noise:
+   - under the *literal* formula that requires a **total** squared error of about
+     3 grey levels² across the entire frame — implausibly small for denoised video;
+   - under the *standard* formula it corresponds to a **mean** squared error of
+     about 3.1 grey levels² (RMSE ≈ 1.75) — entirely plausible.
+
+   So Table I was almost certainly computed with standard PSNR, and the printed
+   definition dropped the `1/(HW)`. This rests on the magnitude of the reported
+   numbers, not on anything the paper states.
+
+   **What we do:** standard PSNR, `10 * log10(255^2 / MSE)` with MSE the mean over
+   pixels, computed per frame against the ground-truth background and averaged over
+   frames, as the paper describes. Any comparison against Table I uses this
+   definition. One methodology sentence.
+   *[paper §IV, "Performance evaluation indices"; Table I; `src/gate_candela.py`]*
+
+   **Running tally of source-paper inconsistencies** (for the rigor paragraph):
+   item 1 (rank rule infeasible for non-square frames), item 11 (E-threshold
+   `2/beta_X` vs Appendix A's `1/beta_X`), item 14 (stopping rule halts after one
+   iteration), item 15 (PSNR formula). Plus disclosed inferences where the paper is
+   silent: item 12 (`beta_X` error measure).
+
 3. **IMPLEMENTATION FAITHFULNESS.** State that we implemented real SS-RTD
    faithfully from Shen et al. 2022 — Tucker/HOOI for `L`, anisotropic TV for
    `S`, L1 for noise `E`, a single `lambda`, and adaptive ADMM penalties — and
