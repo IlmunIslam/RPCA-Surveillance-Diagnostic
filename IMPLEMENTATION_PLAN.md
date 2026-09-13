@@ -183,11 +183,41 @@ grid minimization of eq. (10) agrees to 2.1e-5 at a grid resolution of 5e-5.
 iteration cost so far: HOOI 12.33 s + S-update 6.33 s + f-update 3.00 s
 ≈ 21.7 s, before (e) and (f).
 
-### (e) E-update (sparse noise) — eq (12)
+### (e) E-update (sparse noise) — eq (12) ✅ DONE 2026-09-13
 
 - `E = soft( X - L - S - Lambda_X/beta_X , 2/beta_X )`.
   **[NOTE: threshold is `2/beta_X`, verified from rendered image — NOT `1/beta_X`]**
 - UNIT TEST: soft-threshold correctness; confirm the `2/beta_X` threshold is used.
+
+**Status: verified 2026-09-13.** Built as `update_E` in `src/ssrtd_real.py`
+(with module constant `E_THRESHOLD_FACTOR = 2.0` and a `factor` parameter);
+tests in `src/test_e_update.py`, run with `python -m src.test_e_update`. 23/23
+assertions across five tests: formula correctness (bitwise exact plus a
+hand-computed case), the threshold constant, argument identity, the measured
+optimality gap, and degenerate endpoints.
+
+> 🔴 **The `2/beta_X` threshold is numerically confirmed inconsistent with the
+> paper's own Appendix A derivation.** eq. (17) reduces the E-terms to
+> `min_E ||E||_1 + (beta_X/2)||A - E||^2`, whose proximal threshold is
+> `1/beta_X`. Measured eq. (17) stationarity gap: **0.000 at factor 1.0**
+> (exactly optimal), **1.000 at factor 2.0** — matching the predicted
+> `|1 - factor|` exactly — with 10-30 entries per test shape zeroed beyond the
+> eq. (17) radius. Checked and ruled out: the `(beta/2)` convention IS present in
+> eqs (15), (16), (17), so an unusual Lagrangian scaling does not explain it, and
+> Appendix A shows no shrinkage step for (12). **We implement 2.0 as printed** and
+> settle the choice by measurement at (g) — see the carry-forward decisions
+> there and `PAPER_NOTES.md` item 11.
+
+**The argument is one of three near-identical residuals** — eq. (8) uses
+`X - S - E - Lambda_X/beta_X`, eq. (9) uses `X - L - E`, eq. (12) uses
+`X - L - S - Lambda_X/beta_X`. A mix-up runs cleanly, so the test pins it
+explicitly (distances 3.4-4.2 to the wrong two) and also pins that the
+multiplier enters as `-Lambda_X/beta_X`, not `+` and not `* beta_X`.
+
+**Measured:** `update_E` 0.54 s/call, **peak working set 1,126 MB** — the
+cheapest component so far, since `E` lives in `(H,W,T)` rather than the stacked
+`(3,H,W,T)` space. Running per-outer-iteration cost: HOOI 12.33 s + S 6.33 s +
+f 3.00 s + E 0.54 s ≈ **22.2 s**, with only (f)'s element-wise updates to add.
 
 ### (f) Multiplier + adaptive penalty updates — eq (13), (14)
 
@@ -205,6 +235,37 @@ iteration cost so far: HOOI 12.33 s + S-update 6.33 s + f-update 3.00 s
   (13), (14).
 - Stop: `||E_t - E_{t-1}||_F / max(1, ||E_{t-1}||_F) < 1e-6`, or `iter > 100`.
 - Log residual/beta/iter each step.
+
+**CARRY-FORWARD DECISIONS — to settle at assembly, by measurement, not argument.**
+
+1. 🔴 **Which E-threshold factor do we run the real experiments with?**
+   eq. (12) prints `2/beta_X`; Appendix A's eq. (17) implies `1/beta_X`. Measured
+   at (e): factor 1.0 gives an eq. (17) stationarity gap of **0.000** (exactly
+   optimal), factor 2.0 gives **1.000** (a unit residual on every surviving
+   entry) and over-zeroes the band `1/beta_X < |A| <= 2/beta_X`. Full reasoning
+   in `PAPER_NOTES.md` item 11. Options:
+
+   | Option | For | Against |
+   |---|---|---|
+   | `factor = 2.0` | faithful to eq. (12) as printed | not optimal for the paper's own objective |
+   | `factor = 1.0` | consistent with the Appendix A derivation | departs from the printed algorithm |
+   | **run both, compare** | lets the data decide; costs one extra run on a few videos | slightly more compute |
+
+   **Recommended: run both on a handful of videos at (g) and let the data
+   decide.** If the two factors give materially the same decomposition, the
+   discrepancy is a non-issue and we say so in one sentence. If they diverge, it
+   is a finding about the source method worth reporting properly. Either way the
+   answer is measured rather than asserted, and `update_E(..., factor=...)`
+   already makes it a one-line experiment.
+
+2. **Warm-starting HOOI** — deferred from (b). Decide after measuring real
+   outer-iteration counts. If adopted, report as a documented deviation with a
+   before/after comparison (`PAPER_NOTES.md` item 5).
+
+3. **Precision / FFT strategy** — deferred from (c). The S-update sets the
+   memory ceiling at 2,840 MB; (d) 2,181 MB and (e) 1,126 MB are below it. Try
+   `rfftn`/`irfftn` first (no precision cost, but `Phi` must be rebuilt on the
+   half-spectrum and (a) re-tested); float32 only if that is not enough.
 
 ## VERIFICATION GATE (before ANY VIRAT run)
 

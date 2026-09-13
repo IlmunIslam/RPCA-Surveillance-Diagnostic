@@ -45,6 +45,49 @@
    eq. (10) could reasonably build the other one.
    *[`src/test_f_update.py` test 4; `src/ssrtd_real.py:update_f`]*
 
+11. 🔴 **THE SOURCE PAPER IS INTERNALLY INCONSISTENT ON THE E-UPDATE THRESHOLD.**
+   *Rigor finding — the strongest one from the Phase 1 build.*
+
+   **eq. (12) prints threshold `2/beta_X`** (verified against a rendered page
+   image, because it looked unusual). **Appendix A's derivation implies
+   `1/beta_X`.** Eq. (17) reduces the E-terms of the augmented Lagrangian to
+   `min_E ||E||_1 + (beta_X/2)||A - E||^2` with
+   `A = X - L - S - Lambda_X/beta_X`, whose proximal solution has threshold
+   `1/beta_X` — the same pattern the paper itself applies in (16) -> (10) -> (11),
+   where the threshold is `lambda/beta_f`.
+
+   **Verified, not inferred:** the `(beta/2)` convention IS present in eqs (15),
+   (16) and (17), so the factor 2 is *not* explained by an augmented-Lagrangian
+   scaling that omits the one-half; (16) -> (11) uses `lambda/beta_f`; and
+   Appendix A shows **no shrinkage step** for (12), printing only "Thus, the
+   equation (12) can be derived."
+
+   **Measured** (`src/test_e_update.py` test 4), on the eq. (17) stationarity
+   residual `sign(E) + beta_X(E - A)`, whose predicted magnitude is
+   `|1 - factor|`:
+
+   | factor | eq. (17) stationarity gap | entries zeroed beyond the eq. (17) radius |
+   |---|---|---|
+   | **1.0** | **0.000** (exactly optimal) | 0 |
+   | **2.0** | **1.000** (unit residual on every surviving entry) | 10-30 per test shape |
+
+   With `factor = 2.0`, entries in the band `1/beta_X < |A| <= 2/beta_X` are
+   zeroed that eq. (17) optimality would keep.
+
+   **What we do:** implement `2/beta_X` exactly as eq. (12) prints
+   (`E_THRESHOLD_FACTOR = 2.0`), and expose a `factor` parameter so `1.0` is a
+   one-line experiment. Calling it a typo in code would substitute our
+   expectation for the source — the failure mode this project exists to correct.
+   **Resolved by measurement at assembly (g)**; see the carry-forward decision in
+   `IMPLEMENTATION_PLAN.md`.
+
+   **Why this belongs in the paper:** it is a concrete, reproducible finding
+   about the source method that a careful reimplementer would hit and a casual
+   one would not. It also demonstrates the verification discipline the original
+   review found lacking.
+   *[`src/test_e_update.py` test 4; `src/ssrtd_real.py:update_E`; Appendix A
+   eqs (15), (16), (17)]*
+
 3. **IMPLEMENTATION FAITHFULNESS.** State that we implemented real SS-RTD
    faithfully from Shen et al. 2022 — Tucker/HOOI for `L`, anisotropic TV for
    `S`, L1 for noise `E`, a single `lambda`, and adaptive ADMM penalties — and

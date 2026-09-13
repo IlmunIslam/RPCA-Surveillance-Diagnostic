@@ -18,7 +18,7 @@ Build status (see IMPLEMENTATION_PLAN.md):
     (b) Tucker / HOOI low-rank solver for L        -- this file, below
     (c) S-update via 3D FFT                        -- this file, below
     (d) f-update (TV auxiliary)                    -- this file, below
-    (e) E-update (sparse noise)                    -- not yet built
+    (e) E-update (sparse noise)                    -- this file, below
     (f) Multiplier + adaptive penalty updates      -- not yet built
     (g) Full ADMM assembly (Algorithm 1)           -- not yet built
 """
@@ -437,3 +437,69 @@ def update_f(S, mult_f, lam, beta_f, return_info=False):
         return f, {"A": A, "tau": float(tau),
                    "zero_fraction": float(np.mean(f == 0.0))}
     return f
+
+
+# ===========================================================================
+# (e) E-update, sparse noise -- eq. (12)
+# ===========================================================================
+#
+#   E = soft( X - L - S - Lambda_X/beta_X ,  2/beta_X )                  (12)
+#
+# THE THRESHOLD CONSTANT IS DISPUTED, AND WE IMPLEMENT WHAT IS PRINTED.
+#
+# eq. (12) prints 2/beta_X. We verified that against a rendered page image
+# because it looked unusual, and it is definitely a 2. But the paper's own
+# Appendix A derivation does not support it:
+#
+#   eq. (17) reduces the E-terms of the augmented Lagrangian to
+#       (beta_X/2) ||X - L - S - Lambda_X/beta_X - E||_F^2 + ||E||_1 + const
+#   i.e. min_E ||E||_1 + (beta_X/2)||A - E||^2  with A = X - L - S - Lambda_X/beta_X.
+#
+# That is the same form as eq. (16), which the paper carries into (10) and
+# solves in (11) with threshold lambda/beta_f. Applying the identical pattern
+# here, where the ||E||_1 coefficient is 1, gives 1/beta_X, not 2/beta_X.
+# Appendix A prints "Thus, the equation (12) can be derived" and shows no
+# shrinkage step, so nothing in the paper justifies the 2. The (beta/2)
+# convention IS present in (15), (16) and (17), so the factor is not explained
+# by an unconventional Lagrangian scaling either.
+#
+# Most likely a typo -- but calling it one in code would substitute our
+# expectation for the source, which is the failure mode this project exists to
+# correct. So: implement 2.0 as printed, expose `factor` so 1.0 is a one-line
+# experiment, and resolve it by measurement on real data at assembly (g).
+# See PAPER_NOTES.md item 11.
+
+E_THRESHOLD_FACTOR = 2.0
+
+
+def update_E(X, L, S, mult_X, beta_X, factor=E_THRESHOLD_FACTOR,
+             return_info=False):
+    """
+    Closed-form E-update, eq. (12).
+
+    X, L, S, mult_X : (H, W, T)
+    beta_X          : positive scalar
+    factor          : threshold numerator. Defaults to 2.0, exactly as eq. (12)
+                      prints. Pass 1.0 for the value Appendix A's eq. (17)
+                      implies; see the note above.
+    -> E, or (E, info) when return_info
+
+    The argument is  A = X - L - S - Lambda_X/beta_X. Note this is NOT either of
+    the two neighbouring residuals, which differ by one term each:
+        eq. (8):  X_tilde = X - S - E - Lambda_X/beta_X   (drops L, carries E)
+        eq. (9):  X - L - E                               (drops S, no multiplier)
+    All three are plausible-looking and produce output; test_e_update.py pins
+    which one this is.
+    """
+    X = np.asarray(X, dtype=np.float64)
+    if np.ndim(beta_X) != 0 or not beta_X > 0:
+        raise ValueError(f"beta_X must be a positive scalar (got {beta_X!r}).")
+
+    A = X - L - S - mult_X / beta_X
+    tau = factor / beta_X
+    E = soft_threshold(A, tau)
+
+    if return_info:
+        return E, {"A": A, "tau": float(tau), "factor": float(factor),
+                   "zero_fraction": float(np.mean(E == 0.0))}
+    return E
