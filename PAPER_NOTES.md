@@ -88,6 +88,19 @@
    *[`src/test_e_update.py` test 4; `src/ssrtd_real.py:update_E`; Appendix A
    eqs (15), (16), (17)]*
 
+12. **THE `beta_X` ERROR MEASURE IS OUR INFERENCE, NOT THE PAPER'S.** eq. (14)
+   is printed for `beta_f` only, prefaced *"Take `beta_f` as an example"*, with
+   `Err(f^k) = ||f_k - D vec(S_k)||`. The paper states that **both** penalties
+   follow the adaptive scheme but **never states the error measure for
+   `beta_X`**. We use the natural counterpart — the primal residual of the other
+   constraint of eq. (6), `||X - L - S - E||_F`.
+
+   This must not pass as if specified. It is a reasonable reading, it is the
+   only obvious candidate, and it is still an assumption we made rather than
+   something we read. One methodology sentence.
+   *[`src/ssrtd_real.py:primal_residuals`; `src/test_multipliers.py` test 1;
+   paper eq. (14) and the sentence introducing it]*
+
 3. **IMPLEMENTATION FAITHFULNESS.** State that we implemented real SS-RTD
    faithfully from Shen et al. 2022 — Tucker/HOOI for `L`, anisotropic TV for
    `S`, L1 for noise `E`, a single `lambda`, and adaptive ADMM penalties — and
@@ -153,6 +166,36 @@
    would need. Confirmed numerically: `Phi.min() = 0.0` and
    `denom.min() == beta_X` on every shape tested.
    *[`src/test_s_update.py` test 2; IMPLEMENTATION_PLAN.md (a) carry-forward]*
+
+13. **THE TWO PENALTY SCHEDULES DIFFER IN KIND, NOT DEGREE — AND THAT MAY
+   EXPLAIN THE BASELINE'S COLLAPSE.** Real SS-RTD's eq. (14) grows `beta`
+   **conditionally** (only when the residual fails to shrink by `c2 = 0.95`)
+   and **without any cap**. The old baseline ramped `mu` **unconditionally**
+   every iteration and capped it at `1e6` (`src/ssrtd.py:75,90`:
+   `mu = min(mu * 1.5, 1e6)`).
+
+   | | Real SS-RTD, eq. (14) | Naive baseline, `ssrtd.py` |
+   |---|---|---|
+   | Trigger | only on stalled residual | every iteration, unconditionally |
+   | Factor | `c1 = 1.15` | `1.5` |
+   | Cap | none | `1e6` |
+   | 100-iteration bound | `1.174e6` (worst case, never converging) | saturates after ~40 iterations regardless |
+
+   **Consequence for the baseline:** because `mu` saturated at `1e6` after ~40
+   of 500 iterations, the effective soft-threshold radii `lam_s/mu` and
+   `lam_n/mu` fell to ~`1e-8` — below the `1e-6` near-zero threshold
+   `metrics.compute_sparsity` itself uses. **The tuned lambdas may therefore
+   have been inert for the large majority of each run**, which is an independent
+   candidate mechanism for the winner-takes-all collapse, separate from the
+   two-L1 argument. The real algorithm's penalty instead tracks actual
+   convergence, so it cannot go inert the same way.
+
+   Currently reasoning plus arithmetic, **not yet measured** — the baseline's
+   iteration counts were never recorded (`all_results.csv` has no `n_iter`
+   column). **Becomes answerable when (g) logs `beta` per iteration on real
+   data.** See `RESEARCH_LOG.md` §4 item 1.
+   *[`src/test_multipliers.py` test 5; `src/ssrtd.py:75,90`; RESEARCH_LOG.md §4
+   item 1]*
 
 9. **The baseline retains its value under the new framing.** The collapse
    finding, the parameter-ratio mechanism and the hybrid negative result are all

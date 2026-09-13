@@ -219,13 +219,45 @@ cheapest component so far, since `E` lives in `(H,W,T)` rather than the stacked
 `(3,H,W,T)` space. Running per-outer-iteration cost: HOOI 12.33 s + S 6.33 s +
 f 3.00 s + E 0.54 s ≈ **22.2 s**, with only (f)'s element-wise updates to add.
 
-### (f) Multiplier + adaptive penalty updates — eq (13), (14)
+### (f) Multiplier + adaptive penalty updates — eq (13), (14) ✅ DONE 2026-09-13
 
 - `lambda_f <- lambda_f - gamma*beta_f*(f - D vec(S))`;
   `Lambda_X <- Lambda_X - gamma*beta_X*(X - L - S - E)`. `gamma = 1.1`.
 - Adaptive: `beta <- c1*beta` ONLY IF `Err(f^{k+1}) >= c2*Err(f^k)`, else unchanged.
   `c1 = 1.15`, `c2 = 0.95`. `Err(f^k) = ||f_k - D vec(S_k)||`.
 - UNIT TEST: confirm `beta` grows only when residual fails to shrink by `c2`.
+
+**Status: verified 2026-09-13.** Built as `primal_residuals`,
+`update_multipliers` and `update_penalty` in `src/ssrtd_real.py` with named
+constants `GAMMA=1.1`, `C1=1.15`, `C2=0.95`; tests in
+`src/test_multipliers.py`. 27/27 assertions across five tests.
+
+**The minus sign is derived, not assumed.** eq. (13) uses `-`, where textbook
+ADMM usually writes `+`. That follows from eq. (7) defining the augmented
+Lagrangian with a NEGATIVE inner product. The test differentiates eq. (7)
+numerically — finite-difference `dL/dlambda_f` matches the analytic `-<r,v>` to
+all printed digits — and confirms dual ascent along that gradient reproduces
+eq. (13) bitwise, with the `+` convention differing by 11.7-14.9.
+
+**The growth direction and boundary are pinned.** `beta` grows iff
+`Err_new >= c2 * Err_old`, i.e. only on LACK of progress; exact equality grows
+(`>=`); `beta` never decreased across 2000 random draws. The inverted rule gives
+the opposite outcome on a good-progress step, so a flipped comparison cannot
+slip through.
+
+> ⚠️ **`beta_X`'s error measure is our inference.** eq. (14) is printed for
+> `beta_f` only ("Take `beta_f` as an example") and the paper never states the
+> measure for `beta_X`. We use `||X - L - S - E||_F`, the other constraint's
+> primal residual. Disclosed in `PAPER_NOTES.md` item 12.
+
+**Measured:** `primal_residuals` 1.11 s, `update_multipliers` 1.45 s,
+`update_penalty` <1e-6 s, peak 2,313 MB. **Per-outer-iteration total, measured
+end to end: HOOI 12.33 + S 6.33 + f 3.00 + E 0.54 + multipliers 2.57 =
+24.77 s** — so 100 outer iterations is ~41 min/video and **~124 h for 180
+videos** at literal settings, above the ~90-95 h extrapolated at (c).
+
+Note `primal_residuals` recomputes `tv_forward(S)`, which the f-update already
+built. Threading it through at (g) saves ~1 s and ~400 MB per iteration.
 
 ### (g) Assemble full ADMM — Algorithm 1
 

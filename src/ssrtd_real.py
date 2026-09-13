@@ -19,7 +19,7 @@ Build status (see IMPLEMENTATION_PLAN.md):
     (c) S-update via 3D FFT                        -- this file, below
     (d) f-update (TV auxiliary)                    -- this file, below
     (e) E-update (sparse noise)                    -- this file, below
-    (f) Multiplier + adaptive penalty updates      -- not yet built
+    (f) Multiplier + adaptive penalty updates      -- this file, below
     (g) Full ADMM assembly (Algorithm 1)           -- not yet built
 """
 
@@ -503,3 +503,84 @@ def update_E(X, L, S, mult_X, beta_X, factor=E_THRESHOLD_FACTOR,
         return E, {"A": A, "tau": float(tau), "factor": float(factor),
                    "zero_fraction": float(np.mean(E == 0.0))}
     return E
+
+
+# ===========================================================================
+# (f) Multiplier and adaptive penalty updates -- eq. (13), (14)
+# ===========================================================================
+#
+# eq. (13):  lambda_f <- lambda_f - gamma * beta_f * (f - D vec(S))
+#            Lambda_X <- Lambda_X - gamma * beta_X * (X - L - S - E)
+#
+# eq. (14), printed for beta_f only:
+#            beta_f <- c1 * beta_f   if Err(f^{k+1}) >= c2 * Err(f^k)
+#                      beta_f        otherwise
+#            Err(f^k) = ||f_k - D vec(S_k)||
+#
+# with gamma = 1.1, c1 = 1.15, c2 = 0.95.
+#
+# THE MINUS SIGN IS CORRECT, BECAUSE OF eq. (7). Textbook ADMM usually writes
+# lambda <- lambda + rho * c. The paper writes minus, and that follows from its
+# augmented Lagrangian (7) being defined with a NEGATIVE inner product,
+# -<lambda_f, f - Dvec(S)>. Dual ascent then moves along -c, not +c. The sign
+# here is tied to (7), not to convention; test_multipliers.py verifies that link
+# numerically rather than assuming it.
+#
+# THE GROWTH CONDITION IS EASY TO INVERT. beta grows only when the residual
+# FAILS to shrink -- Err_new >= c2 * Err_old means "still at least 95% of the
+# previous error, so we are not making progress; tighten the penalty". The
+# comparison is >=, so exact equality grows. beta never decreases, and eq. (14)
+# imposes NO CAP (unlike the old baseline's min(mu * 1.5, 1e6) in ssrtd.py).
+
+GAMMA = 1.1    # multiplier step scale, eq. (13)
+C1 = 1.15      # penalty growth factor, eq. (14)
+C2 = 0.95      # progress threshold, eq. (14)
+
+
+def primal_residuals(f, S, X, L, E):
+    """
+    The two constraint residuals of eq. (6), as norms.
+
+    err_f = ||f - D vec(S)||        -- the paper's Err(f^k), eq. (14)
+    err_X = ||X - L - S - E||_F     -- INFERRED, see below
+
+    NOTE: eq. (14) is printed for beta_f only, prefaced "Take beta_f as an
+    example", and the paper never states the error measure for beta_X. We use
+    the natural counterpart: the primal residual of the other constraint of
+    eq. (6). This is an inference, not something the paper specifies. Disclosed
+    in PAPER_NOTES.md.
+    """
+    err_f = float(np.linalg.norm(np.asarray(f - tv_forward(S)).ravel()))
+    err_X = float(np.linalg.norm(np.asarray(X - L - S - E).ravel()))
+    return err_f, err_X
+
+
+def update_multipliers(mult_f, mult_X, f, S, X, L, E, beta_f, beta_X,
+                       gamma=GAMMA):
+    """
+    Multiplier updates, eq. (13). Returns new (mult_f, mult_X); inputs unchanged.
+
+    gamma scales the MULTIPLIER step and is 1.1. It is not c1 (1.15), which
+    scales the penalty in eq. (14). The two are within 0.05 of each other and
+    both multiply something -- keep them straight.
+    """
+    new_mult_f = mult_f - gamma * beta_f * (f - tv_forward(S))
+    new_mult_X = mult_X - gamma * beta_X * (X - L - S - E)
+    return new_mult_f, new_mult_X
+
+
+def update_penalty(beta, err_new, err_prev, c1=C1, c2=C2):
+    """
+    Adaptive penalty update, eq. (14). Returns (beta, grew).
+
+    beta grows by c1 ONLY IF err_new >= c2 * err_prev, i.e. only when the
+    residual failed to shrink by the factor c2. Otherwise beta is unchanged.
+    beta never decreases, and there is no upper cap.
+
+    On the first iteration there is no previous error. Pass err_prev = inf: the
+    condition is then False and beta is left alone, which is the sane default.
+    (g) owns that bookkeeping -- this function stays stateless so it can be
+    tested exhaustively.
+    """
+    grew = bool(err_new >= c2 * err_prev)
+    return (c1 * beta if grew else beta), grew
