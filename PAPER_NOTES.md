@@ -4,9 +4,13 @@
 > paper must say, filed under the section it informs, so nothing discovered
 > during the build is lost before Phase 5 writing.
 >
-> **Append to this file as (d), (e), (f), (g) are built.** Each entry should
+> **Append to this file as (e), (f), (g) are built.** Each entry should
 > carry its source — the log entry, plan section or test that establishes it —
 > so a claim in the manuscript can be traced back to something verified.
+>
+> **Item numbers are stable identifiers, not reading order.** New entries take
+> the next free number and are filed under the section they inform, so a number
+> cited elsewhere never changes meaning.
 >
 > Started 2026-09-13, after components (a), (b) and (c) were verified.
 
@@ -28,6 +32,18 @@
    carries a single spatial pattern with a time-varying scale.
    *[RESEARCH_LOG.md §5 item 2; `src/test_hooi.py` test 2 — measured frame
    deviation 2.8e-2 to 6.3e-2]*
+
+10. **ANISOTROPIC VS ISOTROPIC TV IS AMBIGUOUS IN EQ. (10).** The paper's eq.
+   (10) minimizes `lambda ||f||_q` with a **generic `q`**, which does not
+   distinguish anisotropic TV (element-wise soft-threshold) from isotropic TV
+   (per-voxel group shrinkage of `(f_h, f_v, f_t)` through a 2-norm). **Algorithm
+   1 line 4 settles it** — "Updating `f` via (11) for anisotropic total
+   variation" — as do the abstract and §III-C. We implemented the anisotropic,
+   element-wise operator and verified it **differs measurably from isotropic
+   group shrinkage** (max difference 0.7999 on a test case), so the choice is not
+   cosmetic. Worth one methodology sentence, since a reimplementer reading only
+   eq. (10) could reasonably build the other one.
+   *[`src/test_f_update.py` test 4; `src/ssrtd_real.py:update_f`]*
 
 3. **IMPLEMENTATION FAITHFULNESS.** State that we implemented real SS-RTD
    faithfully from Shen et al. 2022 — Tucker/HOOI for `L`, anisotropic TV for

@@ -17,7 +17,7 @@ Build status (see IMPLEMENTATION_PLAN.md):
     (a) TV difference operators + Phi precompute   -- this file, below
     (b) Tucker / HOOI low-rank solver for L        -- this file, below
     (c) S-update via 3D FFT                        -- this file, below
-    (d) f-update (TV auxiliary)                    -- not yet built
+    (d) f-update (TV auxiliary)                    -- this file, below
     (e) E-update (sparse noise)                    -- not yet built
     (f) Multiplier + adaptive penalty updates      -- not yet built
     (g) Full ADMM assembly (Algorithm 1)           -- not yet built
@@ -25,9 +25,11 @@ Build status (see IMPLEMENTATION_PLAN.md):
 
 import numpy as np
 
-# Reuse the repo's existing unfolding helpers rather than adding a third copy;
-# tensor_rpca.py and ssrtd.py already define this exact pair.
-from src.tensor_rpca import unfold, fold
+# Reuse the repo's existing helpers rather than adding another copy;
+# tensor_rpca.py and ssrtd.py already define these. soft_threshold there is
+# character-for-character the paper's definition,
+# soft(A, tau) = sign(A) * max(|A| - tau, 0), used by both (d) and (e).
+from src.tensor_rpca import unfold, fold, soft_threshold
 
 # Axis convention. Tensors are (H, W, T): axis 0 = height, 1 = width, 2 = time.
 #
@@ -366,3 +368,72 @@ def update_S(X, L, E, mult_X, f, mult_f, beta_X, beta_f, phi=None,
             "C": C,
         }
     return S
+
+
+# ===========================================================================
+# (d) f-update, TV auxiliary -- eq. (10), (11)
+# ===========================================================================
+#
+# eq. (10):  min_f  lambda ||f||_q + (beta_f/2) ||f - (D vec(S) + lambda_f/beta_f)||_2^2
+# eq. (11):  f = soft( D vec(S) + lambda_f/beta_f ,  lambda/beta_f )
+#
+# q = 1 here: Algorithm 1 line 4 reads "Updating f via (11) for anisotropic
+# total variation", and the soft-threshold is applied ELEMENT-WISE over all
+# 3HWT entries. Isotropic TV would instead shrink (f_h, f_v, f_t) as a group
+# through a per-voxel 2-norm; (d) is the only component that would change.
+#
+# THE TWO LAMBDAS. Both appear in eq. (11) and they are different objects:
+#
+#   lambda    scalar tuning parameter, in [0.2, 1]  -> the THRESHOLD, lambda/beta_f
+#   lambda_f  multiplier, shape (3, H, W, T)        -> the SHIFT,      lambda_f/beta_f
+#
+# In print they differ by one superscript and sit in the same expression. Swap
+# them in code and NumPy raises nothing -- a scalar shift and an array threshold
+# both broadcast, producing a correctly shaped, entirely wrong f, after which
+# the ADMM converges to something plausible. Hence `lam` vs `mult_f` here, the
+# argument ordering below, and the explicit guards.
+
+
+def update_f(S, mult_f, lam, beta_f, return_info=False):
+    """
+    Closed-form f-update, eq. (11) -- the proximal operator of the l1 norm.
+
+    S       : (H, W, T)      -- current smooth component
+    mult_f  : (3, H, W, T)   -- the multiplier lambda_f (NOT the tuning parameter)
+    lam     : scalar         -- the tuning parameter lambda, in [0.2, 1]
+    beta_f  : positive scalar
+    -> f of shape (3, H, W, T), or (f, info) when return_info
+
+    Guards reject the lambda/lambda_f swap at the boundary: passing the
+    multiplier as `lam` fails the scalar check, and passing the scalar as
+    `mult_f` fails the shape check. Without them the swapped call runs cleanly
+    and returns wrong numbers.
+    """
+    S = np.asarray(S, dtype=np.float64)
+    mult_f = np.asarray(mult_f, dtype=np.float64)
+
+    if np.ndim(lam) != 0:
+        raise ValueError(
+            f"lam must be the SCALAR tuning parameter (got array of shape "
+            f"{np.shape(lam)}). The (3, H, W, T) multiplier is `mult_f` -- "
+            f"in eq. (11) lambda sets the threshold and lambda_f the shift."
+        )
+    if np.ndim(beta_f) != 0 or not beta_f > 0:
+        raise ValueError(f"beta_f must be a positive scalar (got {beta_f!r}).")
+    expected = (3,) + S.shape
+    if mult_f.shape != expected:
+        raise ValueError(
+            f"mult_f must have shape {expected} to match D vec(S) (got "
+            f"{mult_f.shape}). If a scalar was passed here, the lambda / "
+            f"lambda_f arguments are swapped."
+        )
+
+    # A = D vec(S) + lambda_f / beta_f     (the shift uses the MULTIPLIER)
+    A = tv_forward(S) + mult_f / beta_f
+    tau = lam / beta_f                      # the threshold uses the SCALAR
+    f = soft_threshold(A, tau)
+
+    if return_info:
+        return f, {"A": A, "tau": float(tau),
+                   "zero_fraction": float(np.mean(f == 0.0))}
+    return f

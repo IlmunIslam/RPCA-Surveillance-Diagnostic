@@ -149,11 +149,39 @@ rather than emitting inf/nan. Measured `Phi.min() = 0.0` and
 >    cost. The ~62 h figure recorded under (b) covered HOOI only; including (c)
 >    the literal-settings estimate is **~90-95 h for 180 videos**.
 
-### (d) f-update (TV auxiliary) — eq (11)
+### (d) f-update (TV auxiliary) — eq (11) ✅ DONE 2026-09-13
 
 - `f = soft( D vec(S) + lambda_f/beta_f , lambda/beta_f )`,
   `soft(A,tau) = sign(A)*max(|A|-tau,0)`.
 - UNIT TEST: soft-threshold correctness on known inputs.
+
+**Status: verified 2026-09-13.** Built as `update_f` in `src/ssrtd_real.py`;
+tests in `src/test_f_update.py`, run with `python -m src.test_f_update`. 25/25
+assertions across five tests: formula correctness (bitwise exact, plus a
+hand-computed case), proximal optimality, the lambda collision, anisotropy, and
+the degenerate endpoints. `soft_threshold` is imported from `tensor_rpca` rather
+than redefined.
+
+> ⚠️ **The lambda collision is a silent bug, and the test proved it.** `lam`
+> (scalar tuning parameter, sets the threshold `lambda/beta_f`) and `mult_f`
+> (the `(3,H,W,T)` multiplier, sets the shift `lambda_f/beta_f`) differ by one
+> superscript in the paper and appear in the same expression. Swapping them in
+> code **raises nothing** — a scalar shift and an array threshold both broadcast
+> — and returns a correctly shaped, entirely wrong `f`. Measured
+> `max|correct - swapped| = 3.1562`. `update_f` guards both arguments so a swap
+> fails at the boundary; the same care is needed wherever `lambda_f` is touched,
+> i.e. component (f).
+
+**Proximal optimality is checked independently of the closed form**: the
+subgradient condition `beta_f(f - A) + lambda*sign(f) = 0` holds to 3.3e-16 on
+nonzero entries, every zeroed entry satisfies `|A| <= tau`, and a brute-force
+grid minimization of eq. (10) agrees to 2.1e-5 at a grid resolution of 5e-5.
+
+**Measured:** `update_f` 3.00 s/call, **peak working set 2,181 MB** — below
+(c)'s 2,840 MB, so the FFT solve remains the memory ceiling even though `f` and
+`mult_f` (396 MB each) are the largest individual arrays. Running per-outer-
+iteration cost so far: HOOI 12.33 s + S-update 6.33 s + f-update 3.00 s
+≈ 21.7 s, before (e) and (f).
 
 ### (e) E-update (sparse noise) — eq (12)
 
