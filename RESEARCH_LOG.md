@@ -430,6 +430,94 @@ is not disclosed is the same class of error as the original mislabeling.
 
 ---
 
+## 6. Verification gate (g2) — outcome, 2026-09-13
+
+**Both E-threshold factors PASSED.** Real SS-RTD (`src/ssrtd_real.py`) reproduces the
+paper's Fig. 3 behaviour on the paper's own data. Phase 1 is complete and VIRAT runs are
+no longer gated. Run: `python -m src.gate_candela --factor both` at commit `a796ae6`;
+outputs in `results/gate_candela/`, log in `logs/gate_candela_factor_both.log` (both
+gitignored, about 30 minutes to regenerate). Criterion-by-criterion table in
+`IMPLEMENTATION_PLAN.md` (g2).
+
+Setup: SBI Candela, first 80 files of `Candela_m1.10.zip` (original frames 85-164),
+288x352 grey on the 0-255 scale, 10% random-valued impulse noise by replacement (seed 0),
+lambda 0.4, 100 iterations. Neither run reached the 1e-6 tolerance; the paper's Fig. 3
+also spans 100 iterations.
+
+### 6.1 Factor choice: `factor = 1.0` for VIRAT
+
+Both factors pass, but factor 1.0 is closer to the paper on nearly every paper-derived
+measure:
+
+| | factor 1.0 | factor 2.0 |
+|---|---|---|
+| Average gap from the 39 digitized Fig. 3 points | **0.0030** | 0.0040 |
+| relChg_S at iterations 30 / 50 (paper 0.0099 / 0.0029) | **0.0100 / 0.0033** | 0.0146 / 0.0055 |
+| Final relErr_L (paper ~0.0125 in Fig. 3, 0.013 in Fig. 4) | **0.0137** | 0.0140 |
+| Standard PSNR vs Table I's 43.27 dB | **42.83** | 42.66 |
+| Final constraint residual err_X | **79.7** | 280.5 |
+| E nonzero (10% of pixels actually corrupted) | 74.6% | **38.4%** |
+| Share of E's nonzeros that are real noise | 0.134 | **0.258** |
+
+relChg_S is the most discriminating curve: factor 1.0 follows Fig. 3 almost point for
+point, while factor 2.0 lags. Factor 1.0 is also the value Appendix A's eq. (17) implies
+(`PAPER_NOTES.md` item 11), so the paper's own data and its own derivation agree.
+
+**Decision: factor 1.0 for all VIRAT runs.** This suggests the authors' code used
+`1/beta_X` and eq. (12)'s printed 2 is a typo. That is supporting evidence, not proof:
+both factors pass, and factor 2.0 gives a sparser, more precise E. Neither E is as sparse
+as the injected noise; E also absorbs non-noise detail.
+
+⚠️ The code default `E_THRESHOLD_FACTOR` is still 2.0 (the printed value). Phase 3 must
+pass `factor=1.0` explicitly.
+
+### 6.2 The SBI subset is confirmed as the paper's input
+
+relErr_L at iteration 1 is **0.0628 against the paper's 0.0626**. At iteration 1, L is
+just the Tucker approximation of the noisy input, before any ADMM update, so this value
+depends only on the frames, noise level, grey conversion and ground truth — not on the
+solver. The match confirms that the first 80 files of SBI's subset (original frames
+85-164) are the paper's actual input, on top of the documentary evidence recorded at
+`SBI_SUBSET_FRAMES` in `src/gate_candela.py`.
+
+### 6.3 Open observation: relChg_L mid-run gap (unexplained)
+
+For both factors, relChg_L levels off near **0.010 between iterations 15 and 40**, where
+Fig. 3 has it falling to about 0.002 by iteration 30 — roughly **5x the paper's value**
+over that stretch. It decays by the end (factor 1.0: 0.0010 at iteration 80 against the
+paper's 0.0005, and 0.0002 at 100), so C3b passes. The gap is larger than the ~0.003
+accuracy of reading values off the plot, so it is not a digitization artifact.
+
+**Not explained.** Possible causes, none tested: HOOI details the paper does not specify
+(how the 20 inner iterations are initialized at each outer iteration, or whether they
+warm-start), or a difference in how the authors computed relChg_L. Does not block Phase 3,
+but should be reported alongside the Fig. 3 reproduction rather than omitted.
+
+### 6.4 Measured resources, and the VIRAT projection
+
+| | factor 2.0 | factor 1.0 |
+|---|---|---|
+| Wall time, 100 iterations | 14.2 min | 15.0 min |
+| Per iteration | 8.55 s | 8.99 s |
+| Peak working set | 2,008 MB | 2,541 MB |
+
+Candela is 288x352x80 = 8.1M elements; VIRAT is 180x320x300 = 17.3M, about 2.1x larger.
+Linear scaling projects **~18-19 s per iteration and a 4.3-5.4 GB peak** per VIRAT
+video — **tight on the 8 GB machine** — and, at 100 iterations, **~31 min per video and
+~90 h for all 180**. VIRAT's lower Tucker ranks (144 vs Candela's 231) may bring the time
+down. These are estimates: measure on the first VIRAT video before starting the batch.
+The memory plan is unchanged — try `rfftn` first, float32 only if needed
+(`IMPLEMENTATION_PLAN.md` (g), carry-forward decision 3).
+
+### 6.5 Table I comparison (reported only)
+
+Standard PSNR 42.83 dB (factor 1.0) / 42.66 dB (factor 2.0) against Table I's 43.27 —
+within 0.44 / 0.61 dB. The formula as printed would give -7.2 / -7.4 dB on the same
+result, confirming `PAPER_NOTES.md` item 15 on real data. SSIM 0.9939 / 0.9937 against
+Table I's 0.9019; the likely explanation is in `PAPER_NOTES.md` item 17.
+
+---
+
 ## Verification provenance
 
 Facts above were checked with, and are reproducible via:

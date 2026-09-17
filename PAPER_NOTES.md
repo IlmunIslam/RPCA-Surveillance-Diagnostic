@@ -164,7 +164,32 @@
    item 1 (rank rule infeasible for non-square frames), item 11 (E-threshold
    `2/beta_X` vs Appendix A's `1/beta_X`), item 14 (stopping rule halts after one
    iteration), item 15 (PSNR formula). Plus disclosed inferences where the paper is
-   silent: item 12 (`beta_X` error measure).
+   silent: item 12 (`beta_X` error measure). Candidate fifth finding, an inference not
+   yet confirmed: item 17 (SSIM convention).
+
+17. 🔶 **LIKELY SSIM CONVENTION MISMATCH — CANDIDATE FIFTH FINDING.**
+   *Inference from numerical closeness, NOT confirmed.*
+
+   Table I reports SS-RTD SSIM **0.9019** on Candela at 10% noise. The gate result gives
+   **0.9939** (factor 1.0) / **0.9937** (factor 2.0) with SSIM computed correctly for
+   0-255 images (Wang et al. 2004 settings, `data_range = 255`). That is *higher* than
+   the paper, even though our PSNR is slightly *lower* (42.83 vs 43.27 dB). At around
+   43 dB an SSIM near 0.99 is the expected value, so 0.90 points to a different SSIM
+   computation rather than a worse reconstruction.
+
+   **Most likely cause:** MATLAB's `ssim` takes its default dynamic range from the image
+   class, which is 1 for `double`. Passing 0-255 images stored as `double` without setting
+   the range shrinks SSIM's stabilizing constants by a factor of 255², which lowers the
+   score. Recomputing our saved `L` that way (`data_range = 1`) gives **0.8821**
+   (factor 1.0) / **0.8725** (factor 2.0) — **within 0.02-0.03 of the paper's 0.9019**.
+   The other conventions tested stay at 0.993-0.994 (scikit-image's default 7x7 window;
+   images rounded to uint8).
+
+   **Status: inference.** The paper says nothing about how SSIM was computed beyond
+   citing [43], and we have not seen the authors' code. If this goes in the manuscript,
+   say "likely" and give the numbers. Our own reported SSIM should use the correct 0-255
+   range.
+   *[`results/gate_candela/components_factor{1,2}.npz`; RESEARCH_LOG.md §6.5]*
 
 3. **IMPLEMENTATION FAITHFULNESS.** State that we implemented real SS-RTD
    faithfully from Shen et al. 2022 — Tucker/HOOI for `L`, anisotropic TV for
@@ -215,6 +240,30 @@
    All three suites are re-run as regressions on every subsequent component.
    Reproduce with `python -m src.test_tv_operators`, `python -m src.test_hooi`,
    `python -m src.test_s_update`.
+
+16. ✅ **THE IMPLEMENTATION REPRODUCES THE PAPER'S OWN FIG. 3 ON THE PAPER'S OWN DATA.**
+   *A strong rigor point for the methodology section.*
+
+   Beyond the component unit tests (162 assertions across seven suites), the fully
+   assembled SS-RTD was run against the paper's convergence experiment: SBI Candela,
+   first 80 frames, 10% random-valued impulse noise, lambda 0.4, 100 iterations. **It
+   passed every paper-derived criterion for both E-threshold factors:**
+   - final relErr_L **0.0137** (factor 1.0) against the paper's ~0.013;
+   - relChg_L starting at **0 (1.5e-15)**, as Fig. 3 shows;
+   - relChg_L and relChg_S decaying to about 0;
+   - average gap from 39 digitized Fig. 3 points **0.0030** (factor 1.0).
+
+   **relErr_L at iteration 1 matched to three decimals — 0.0628 against 0.0626** — which
+   also confirms the input frames are the paper's. Standard PSNR came within 0.44 dB of
+   Table I (42.83 vs 43.27).
+
+   This is what lets the paper say its SS-RTD results are results of SS-RTD — the property
+   the original manuscript lacked. The same run settled item 11 by measurement: factor 1.0
+   (Appendix A's value) fits the paper's figure better, and is the factor used for VIRAT.
+   Report the one unexplained discrepancy alongside it — relChg_L at about 5x the paper's
+   value in iterations 15-40, decaying by the end — rather than leaving it out.
+   *[RESEARCH_LOG.md §6; IMPLEMENTATION_PLAN.md (g2); `src/gate_candela.py`;
+   `results/gate_candela/summary.json`]*
 
 ---
 

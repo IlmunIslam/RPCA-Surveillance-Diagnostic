@@ -259,7 +259,7 @@ videos** at literal settings, above the ~90-95 h extrapolated at (c).
 Note `primal_residuals` recomputes `tv_forward(S)`, which the f-update already
 built. Threading it through at (g) saves ~1 s and ~400 MB per iteration.
 
-### (g) Assemble full ADMM — Algorithm 1 — (g1) ✅ DONE 2026-09-13 · (g2) gate PENDING
+### (g) Assemble full ADMM — Algorithm 1 — (g1) ✅ DONE 2026-09-13 · (g2) gate ✅ DONE 2026-09-13
 
 **(g1) status: verified 2026-09-13.** Built as `ssrtd_real` in
 `src/ssrtd_real.py`; tests in `src/test_ssrtd_real.py`. 24/24 assertions across
@@ -275,7 +275,31 @@ Three ambiguities in Algorithm 1 are resolved explicitly in the code:
    gives relative change 0. The test is skipped while `||E_{t-1}||_F = 0`.
    Scale-invariant; `PAPER_NOTES.md` item 14.
 
-**(g2), the verification gate, is still required before any VIRAT run.**
+**(g2) status: ✅ DONE 2026-09-13 — the verification gate PASSED for both E-threshold
+factors.** Ran `python -m src.gate_candela --factor both` at commit `a796ae6` on SBI
+Candela: the first 80 files of `Candela_m1.10.zip` (original frames 85-164, the paper's
+actual input; see the note at `SBI_SUBSET_FRAMES` in `src/gate_candela.py`), 10%
+random-valued impulse noise (seed 0), lambda 0.4. **Both runs went the full 100
+iterations**, matching the paper's Fig. 3, which also spans 100; neither reached the 1e-6
+tolerance. Outputs in `results/gate_candela/` (`summary.json`, `history_factor{1,2}.csv`,
+`components_factor{1,2}.npz`, `fig3_reproduction.png`, `decomposition_frame.png`), full log
+in `logs/gate_candela_factor_both.log`. Both are gitignored; rerunning the command
+regenerates them in about 30 minutes.
+
+| Criterion | factor 2.0 (as printed) | factor 1.0 (Appendix A) |
+|---|---|---|
+| C1 every logged value finite | PASS | PASS |
+| C2 final relErr_L in [0.0065, 0.026], plateaued | PASS, 0.0140 | PASS, 0.0137 |
+| C3a relChg_L at iteration 1 < 1e-8 | PASS, 1.5e-15 | PASS, 1.5e-15 |
+| C3b final relChg_L / relChg_S < 0.005 | PASS, 1.4e-3 / 5.1e-4 | PASS, 2.2e-4 / 2.1e-4 |
+| C3c relChg_S at iteration 30 < iteration 10 | PASS, 0.0146 < 0.0736 | PASS, 0.0100 < 0.0695 |
+| **Verdict** | **PASS** | **PASS** |
+
+**PHASE 1 IS COMPLETE.** Real SS-RTD (`src/ssrtd_real.py`) is built component by
+component, unit-tested (162 assertions across seven suites), and verified end to end
+against the paper's own Fig. 3 on the paper's own data. **VIRAT runs are no longer gated.**
+Interpretation — factor choice, the input confirmation, the unexplained relChg_L mid-run
+gap, resources and the VIRAT projection — is in `RESEARCH_LOG.md` §6.
 
 - Init: `L` via `(r1,r2,r3)`-Tucker of `X`; `S = X - L`; `beta_f = 1e+1/mean(X)`;
   `beta_X = 4e-1/mean(X)`; all other vars `0`.
@@ -286,7 +310,13 @@ Three ambiguities in Algorithm 1 are resolved explicitly in the code:
 
 **CARRY-FORWARD DECISIONS — to settle at assembly, by measurement, not argument.**
 
-1. 🔴 **Which E-threshold factor do we run the real experiments with?**
+1. ✅ **RESOLVED 2026-09-13 by the gate — use `factor = 1.0` for all VIRAT runs.** Both
+   factors passed; factor 1.0 tracked Fig. 3 more closely (average gap 0.0030 vs 0.0040)
+   and is the value Appendix A's derivation implies. ⚠️ **The code default
+   `E_THRESHOLD_FACTOR` is still 2.0, the printed value, so Phase 3 must pass
+   `factor=1.0` explicitly.** Details in `RESEARCH_LOG.md` §6.1. The original question
+   and options, kept for the record:
+   **Which E-threshold factor do we run the real experiments with?**
    eq. (12) prints `2/beta_X`; Appendix A's eq. (17) implies `1/beta_X`. Measured
    at (e): factor 1.0 gives an eq. (17) stationarity gap of **0.000** (exactly
    optimal), factor 2.0 gives **1.000** (a unit residual on every surviving
@@ -315,7 +345,7 @@ Three ambiguities in Algorithm 1 are resolved explicitly in the code:
    `rfftn`/`irfftn` first (no precision cost, but `Phi` must be rebuilt on the
    half-spectrum and (a) re-tested); float32 only if that is not enough.
 
-## VERIFICATION GATE (before ANY VIRAT run)
+## VERIFICATION GATE (before ANY VIRAT run) — ✅ PASSED 2026-09-13, see (g2) above
 
 Reproduce the paper's own behavior on a public benchmark before trusting the implementation:
 
