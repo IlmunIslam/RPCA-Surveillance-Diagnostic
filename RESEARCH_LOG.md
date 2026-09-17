@@ -43,11 +43,16 @@ failing run. It may be true, but nothing here evidences it.
 (low-rank + two independently-thresholded sparse terms). It is NOT the full SS-RTD
 method from the source paper.
 
-> ⚠️ UNVERIFIED: the attribution "Shen et al. 2022". No citation, bibliography,
-> DOI, or arXiv reference exists anywhere in this repo (`paper/` and `notebooks/`
-> are both empty). The exact paper being claimed as the baseline needs to be
-> pinned down and added here before any writeup — the collapse finding is only
-> meaningful relative to a specific, named formulation.
+> ✅ **RESOLVED 2026-08-30 — see §4 item 1.** This flag originally read "UNVERIFIED:
+> the attribution 'Shen et al. 2022'", because no citation, DOI or bibliography
+> existed anywhere in the repo. The paper is now in hand and pinned down:
+> **Shen et al., IEEE TASE vol. 20 no. 1, pp. 583-596, 2022,
+> DOI 10.1109/TASE.2022.3163674**, with its equations transcribed and
+> cross-checked against rendered page images in
+> [`paper/SOURCE.md`](paper/SOURCE.md). The comparison it made possible is §4
+> item 1: `src/ssrtd.py` is **not** that method, so the "generic three-component
+> tensor RPCA variant" wording above understates it — it is a different algorithm,
+> not a partial implementation.
 
 ### `src/tensor_rpca.py`
 Two-component `X = L + S` via ADMM (`tensor_rpca.py:48`). Same `tensor_svt` helper

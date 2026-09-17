@@ -91,27 +91,32 @@ column until it is. See `RESEARCH_LOG.md` §4 item 8.
   ratio. This is a real property of the baseline method and remains a valid
   finding about *it*. It is not a finding about SS-RTD.
 
-## 5. Backup status of the result CSVs — ACTION REQUIRED
+## 5. Backup status of the result CSVs — ✅ DONE 2026-09-09
 
-**The two CSVs exist in exactly one place on Earth: this disk.**
+The two baseline CSVs are now backed up in three places, **verified byte-identical
+by SHA256 (re-checked 2026-09-18)**:
+
+| Copy | Location | Protects against |
+|---|---|---|
+| Original | `results/metrics/` | — |
+| Frozen snapshot | `results/baseline_naive/` (with a README) | overwrite, confusion with new runs |
+| Off-disk | `C:\Users\ilmun\OneDrive\RPCA-Baseline-Archive-2026-09-09\` (with a README) | disk failure |
 
 | File | Size | Rows | Last modified |
 |---|---|---|---|
-| `results/metrics/all_results.csv` | 33,623 B | 180 | 2026-06-28 09:42 |
-| `results/metrics/param_sweep.csv` | 10,311 B | 100 | 2026-07-04 03:07 |
+| `all_results.csv` | 33,623 B | 180 | 2026-06-28 09:42 |
+| `param_sweep.csv` | 10,311 B | 100 | 2026-07-04 03:07 |
 
-Verified 2026-09-09:
+**Why this was urgent (state before 2026-09-09):** both files existed on this disk
+only. They are ignored by `.gitignore:5` (`results/`), so they are in no commit and
+not on GitHub; a search of the whole `E:\works\Video compression Research` tree
+found no other copy; and OneDrive is rooted at `C:\Users\ilmun\OneDrive`, outside
+the `E:` drive. A disk failure or a bad run would have cost the 180-video batch,
+which ran 2026-06-22 to 2026-06-28.
 
-- **Not in git.** Both are ignored by `.gitignore:5` (`results/`), so they are
-  not in any commit and not on GitHub.
-- **No other copy exists.** A search across the whole
-  `E:\works\Video compression Research` tree returns only these two paths.
-- **Not cloud-synced.** OneDrive is rooted at `C:\Users\ilmun\OneDrive`; the `E:`
-  drive is outside it.
-
-So a disk failure, an accidental delete, or a bad run loses ~9 months of
-compute — the 180-video batch alone ran from 2026-06-15 to 2026-06-20.
-`results/figures/` (**2.0 GB**, also gitignored) is in the same position.
+⚠️ **Still not backed up: `results/figures/` (2.0 GB)** — also gitignored, still on
+this disk only. Regenerable from the CSVs and the videos, so lower value than the
+CSVs, but it is not protected.
 
 ### The overwrite risk is real, and it is contamination rather than deletion
 
@@ -128,12 +133,15 @@ would interleave old baseline rows and new SS-RTD rows with **nothing in the dat
 to tell them apart**. That is precisely the confusion this archive exists to
 prevent, and it would be silent.
 
-### Required before any new run
+### Required before any new run — status
 
-1. Copy both CSVs (and ideally `results/figures/`) to storage off this disk.
-2. Snapshot the baseline results under a distinct path — e.g.
-   `results/baseline_naive/` — so Phase 3 cannot write into them.
-3. Point the new implementation at new filenames, and add an explicit `method`
-   column so old and new rows are never ambiguous even if they do land together.
-
-Until step 1 is done, treat these two files as irreplaceable.
+1. ✅ **Copy both CSVs off this disk.** Done 2026-09-09 to OneDrive; hashes
+   re-verified 2026-09-18. `results/figures/` was not copied — see the warning above.
+2. ✅ **Snapshot the baseline under a distinct path.** Done:
+   `results/baseline_naive/`, which no pipeline writes to.
+3. ⏳ **Point the new implementation at new filenames with an explicit `method`
+   column.** Specified as the binding **output contract** in
+   `IMPLEMENTATION_PLAN.md`, and not yet exercised — Phase 3 has not run. The
+   runner must also key its resume check on the new file:
+   `src/batch_runner.py` hard-codes `all_results.csv`, and pointed there it would
+   see all 180 baseline rows and skip every video (`PHASE3_NOTES.md` §3).
