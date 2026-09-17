@@ -133,6 +133,45 @@ would interleave old baseline rows and new SS-RTD rows with **nothing in the dat
 to tell them apart**. That is precisely the confusion this archive exists to
 prevent, and it would be silent.
 
+## 6. Terminology mapping for the archived columns (the files are NOT renamed)
+
+**Decision 2026-09-18: the archived CSVs stay exactly as they are.** All three
+copies of each file are verified byte-identical by SHA256 (§5). Renaming columns
+in place would invalidate that verification and require redoing every copy, and
+rewriting archived result files to match later terminology is the kind of edit
+that reads as tampering. So the stored data is immutable, and the current
+terminology is applied in the **analysis and figure scripts that read these
+files**, never in the files themselves.
+
+Every `ssrtd_*` name below refers to the **naive three-component baseline**
+(`src/ssrtd.py`), not to SS-RTD. Read the columns as follows:
+
+**`all_results.csv`**
+
+| Archived column | What it actually is | Current term |
+|---|---|---|
+| `tensor_*` | Tensor RPCA, `L + S` — correct method, correctly named | Tensor RPCA |
+| `ssrtd_psnr`, `ssrtd_ssim`, `tensor_psnr`, `tensor_ssim` | ADMM constraint residual, not quality (§3) | **do not quote** |
+| `ssrtd_s_sparsity`, `ssrtd_s_nonzero_pct` | the baseline's `S`: plain soft-threshold at `lam_s/mu` | baseline `S` — *not* SS-RTD's TV-smooth `S` |
+| `ssrtd_n_sparsity`, `ssrtd_n_nonzero_pct` | the baseline's `N`: plain soft-threshold at `lam_n/mu` | baseline `N` — has **no** counterpart in SS-RTD (its `E` is L1 noise, a different role) |
+| `ssrtd_winner` | which of the baseline's `S`/`N` absorbed the foreground | baseline winner |
+| `ssrtd_time_s` | baseline runtime | baseline runtime |
+| `N_ssrtd_kb` | H.264 size of the baseline's `N` | baseline `N` size |
+| `hybrid_*` | Tensor-RPCA `L` + baseline `N`, recombined | hybrid (negative result) |
+| `hybrid_compression_ratio` | unaudited denominator (§3) | **do not quote until audited** |
+
+**`param_sweep.csv`**
+
+| Archived column | What it actually is |
+|---|---|
+| `lam_s`, `lam_n`, `config` | the baseline's two soft-threshold weights and the five configs of §3.2 — the baseline has two parameters; SS-RTD has one |
+| `s_nonzero_pct`, `n_nonzero_pct`, `winner` | the baseline's `S`/`N` occupancy and which one won |
+| `recon_error`, `n_iter`, `runtime_min` | baseline constraint residual, iteration count, runtime |
+
+Anything written by Phase 3 uses the new names from the output contract
+(`IMPLEMENTATION_PLAN.md`): a `method` column, and `L`/`S`/`E` columns for real
+SS-RTD, never the `ssrtd_*` prefix.
+
 ### Required before any new run — status
 
 1. ✅ **Copy both CSVs off this disk.** Done 2026-09-09 to OneDrive; hashes

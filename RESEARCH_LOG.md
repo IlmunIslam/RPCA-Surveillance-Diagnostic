@@ -371,11 +371,22 @@ The paper asks a worthwhile question and the underlying phenomenon (parameter-dr
    a Phase 5 framing issue, not a correctness one.
 
 9. **Propagate the item-1 correction to every artifact that carries the label.**
-   At minimum: the manuscript, `README.md`, `CLAUDE.md` (line 23 "SS-RTD — Smooth +
-   Sparse + Residual Tensor Decomposition; subject of the collapse finding", and
-   line 35 "smoothness penalty REMOVED"), the `ssrtd_*` column names in both CSVs,
-   and the module docstring. Decide on a replacement name for the algorithm we
-   actually ran — it needs one, since it is not in the literature under any name.
+   *Status updated 2026-09-18.* Original list: the manuscript, `README.md`,
+   `CLAUDE.md`, the `ssrtd_*` column names in both CSVs, and the `ssrtd.py`
+   module docstring; plus a replacement name for the algorithm we actually ran,
+   which is not in the literature under any name.
+
+   | Artifact | Status | Auto-loads? |
+   |---|---|---|
+   | `CLAUDE.md` | ✅ done, commit `9dc2ef3` — rewritten to the post-pivot framing; the two flagged lines no longer exist | yes |
+   | `README.md` | ⏳ pending — still says "SS-RTD's three-component decomposition (smooth + sparse + residual)" and labels `ssrtd.py` as "SS-RTD implementation" (lines 11-12, 19, 35, 58) | no |
+   | `ssrtd_*` column names in both CSVs | ✅ **decided 2026-09-18: do NOT rename.** The archived CSVs are immutable — all three copies are verified byte-identical by SHA256, and renaming in place would invalidate that and require redoing every copy. The terminology mapping is recorded in `ARCHIVE_BASELINE.md` §6; new terminology is applied in the analysis and figure scripts that *read* the files, never in the stored data | no |
+   | `src/ssrtd.py` module docstring | ⏳ pending — still reads "SS-RTD modified for surveillance video — smoothness penalty removed" and repeats the retracted overflow claim (lines 46-57); stale `lam_s`/`lam_n` defaults in the parameter block too | no |
+   | The manuscript (Overleaf) | ⏳ Phase 5 | no |
+   | A real name for the baseline | ⏳ Phase 2 | no |
+
+   Revisit the pending rows before the paper's final repo state. None of them
+   auto-loads, so none can mislead a session the way `CLAUDE.md` could.
 
 10. **Re-read the §2 reviewer critique in light of item 1.** The review was written
     while the method was still labeled SS-RTD, so its novelty and
