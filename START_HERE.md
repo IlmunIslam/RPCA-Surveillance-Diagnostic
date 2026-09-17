@@ -26,6 +26,7 @@ paper's own results.
 | 4 | `PAPER_NOTES.md` | Every finding that must reach the manuscript, filed by section, each with its source. Item numbers are stable IDs, not reading order. |
 | 5 | `ARCHIVE_BASELINE.md` | What the old method is, which of its results remain valid, which columns must never be quoted (the ~217 dB PSNR), and where its data is backed up. |
 | 6 | `paper/SOURCE.md` | The source paper's citation plus its equations (3)-(14) and Algorithm 1, transcribed and checked against rendered page images. **This is the source of truth for the method.** |
+| 7 | `PHASE3_NOTES.md` | Hard-won lessons for running long batches on this machine: the harness kills background jobs ~50 min in, so detach; smoke-test before a batch; resumability; memory. **Read before launching Phase 3.** |
 
 ## Where we are
 
@@ -58,6 +59,11 @@ python -m src.test_ssrtd_real
 
 **Phase 3: run real SS-RTD with `factor=1.0` on the 180 VIRAT videos — but do the memory
 work first.**
+
+**Read `PHASE3_NOTES.md` before launching anything long.** Claude Code's
+`run_in_background` has killed jobs about 50 minutes in on this machine, so the batch must
+be launched detached (with a watchdog). The notes also cover smoke-testing, resumability
+against the *new* results file, and the per-video timeout.
 
 1. **Memory first.** The projected peak is **4.3-5.4 GB per video on an 8 GB machine** —
    too tight to start a ~90-hour batch. Try `rfftn`/`irfftn` in the S-update first (no

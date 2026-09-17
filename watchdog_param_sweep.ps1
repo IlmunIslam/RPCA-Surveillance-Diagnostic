@@ -4,9 +4,10 @@
 # - If no param_sweep process is running and the sweep isn't complete, relaunches it detached.
 # - Exits cleanly once param_sweep.csv holds all TARGET rows.
 # - Gives up (no crash-loop) if repeated relaunches make no progress.
-# Launch this itself detached (adjust the path to wherever the repo lives):
-#   Start-Process powershell -ArgumentList '-NoProfile','-ExecutionPolicy','Bypass','-File',
-#     'E:\works\Video compression Research\RPCA_Surveillance_Diagnostic\watchdog_param_sweep.ps1' -WindowStyle Hidden
+# Launch this itself detached (adjust the path to wherever the repo lives). Pass the
+# arguments as ONE quoted string: given as an array, -ArgumentList drops a script path
+# that contains spaces, and this path does. See PHASE3_NOTES.md.
+#   Start-Process powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"E:\works\Video compression Research\RPCA_Surveillance_Diagnostic\watchdog_param_sweep.ps1`"" -WindowStyle Hidden
 
 # Resolve the project root from this script's own location, so the watchdog keeps
 # working if the repo is moved or the folder renamed.
