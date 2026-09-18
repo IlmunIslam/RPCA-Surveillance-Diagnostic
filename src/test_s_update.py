@@ -35,7 +35,8 @@ from ctypes import wintypes
 import numpy as np
 
 from src.ssrtd_real import (
-    compute_phi, compute_phi_half, half_shape, tv_forward, tv_adjoint, update_S,
+    compute_phi, compute_phi_half, half_shape, tv_forward, tv_adjoint,
+    tv_adjoint_affine, update_S,
 )
 
 RTOL = 1e-12
@@ -262,6 +263,41 @@ def test_sign_convention():
     return ok
 
 
+# ---------------------------------------------------------------- test 6
+def test_adjoint_affine():
+    """
+    Memory lever C: tv_adjoint_affine(a, F, M) must equal tv_adjoint(a*F - M).
+    It sums the same three per-component terms in the same order, so the bits
+    are expected to match; the assertion allows 1e-13 relative in case a BLAS
+    or roll path reassociates. update_S's C must be unchanged as a result.
+    """
+    print("\n6. tv_adjoint_affine == tv_adjoint(a*F - M) (memory lever C)")
+    rng = np.random.default_rng(6)
+    ok = True
+    for shape in SHAPES + [(6, 8, 11)]:
+        F = rng.standard_normal((3,) + shape)
+        M = rng.standard_normal((3,) + shape)
+        for a in (0.0, 1.0, 1.3, 7815.27):
+            ref = tv_adjoint(a * F - M)
+            got = tv_adjoint_affine(a, F, M)
+            rel = float(np.abs(got - ref).max()) / max(float(np.abs(ref).max()), 1.0)
+            ok &= check(
+                f"shape {shape}, a={a}",
+                rel <= 1e-13 and got.shape == shape,
+                f"rel diff {rel:.1e}; bitwise={got.tobytes() == ref.tobytes()}",
+            )
+
+    # update_S end to end: C (and hence S) unchanged against the direct formula
+    for shape in SHAPES[:2]:
+        st = _random_state(shape, rng)
+        _, info = update_S(**st, return_info=True)
+        C_direct = _rhs(st)
+        rel = float(np.abs(info["C"] - C_direct).max()) / max(float(np.abs(C_direct).max()), 1.0)
+        ok &= check(f"update_S C via affine adjoint == direct formula, shape {shape}",
+                    rel <= 1e-13, f"rel diff {rel:.1e}; bitwise={info['C'].tobytes() == C_direct.tobytes()}")
+    return ok
+
+
 # ---------------------------------------------------------------- probe
 class _MEMCOUNTERS(ctypes.Structure):
     _fields_ = [("cb", wintypes.DWORD), ("PageFaultCount", wintypes.DWORD),
@@ -371,6 +407,7 @@ def main():
         test_half_vs_full_spectrum,
         test_beta_f_zero,
         test_sign_convention,
+        test_adjoint_affine,
     ]
     outcomes = [t() for t in tests]
 
@@ -385,7 +422,7 @@ def main():
 
     print()
     if all(outcomes):
-        print("Component (c) VERIFIED — all five tests pass.")
+        print("Component (c) VERIFIED — all six tests pass.")
         return 0
     print("Component (c) NOT verified — fix before moving to (d).")
     return 1

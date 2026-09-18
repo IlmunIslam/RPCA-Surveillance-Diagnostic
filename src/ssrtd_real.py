@@ -84,6 +84,32 @@ def tv_adjoint(Z):
     return sum(np.roll(Z[i], +1, axis=ax) - Z[i] for i, ax in enumerate(_AXES))
 
 
+def tv_adjoint_affine(a, F, M):
+    """
+    tv_adjoint(a * F - M) without ever forming the stacked (3, H, W, T)
+    combination (memory lever C, used by the eq. (9) S-update).
+
+    Accumulates one component at a time with (H, W, T) buffers: for each k,
+    buf = a * F[k] - M[k], then acc += roll(buf, +1, axis_k) - buf. That is the
+    same per-component term tv_adjoint sums, in the same k order, so the result
+    agrees with tv_adjoint(a * F - M) to round-off (test_s_update test 6 asserts
+    1e-13 relative; the two sum three terms in the same order, so in practice
+    the bits match).
+
+    a : scalar; F, M : (3, H, W, T)  ->  (H, W, T)
+    """
+    F = np.asarray(F)
+    M = np.asarray(M)
+    acc = None
+    for i, ax in enumerate(_AXES):
+        buf = a * F[i]
+        buf -= M[i]
+        term = np.roll(buf, +1, axis=ax)
+        term -= buf
+        acc = term if acc is None else acc + term
+    return acc
+
+
 def tv_norm(S):
     """
     Anisotropic total variation norm, eq. (4):
@@ -407,7 +433,9 @@ def update_S(X, L, E, mult_X, f, mult_f, beta_X, beta_f, phi=None,
             f"or set half_spectrum to match the phi you have."
         )
 
-    C = beta_X * (X - L - E) - mult_X + tv_adjoint(beta_f * f - mult_f)
+    # tv_adjoint(beta_f * f - mult_f) without the two (3,H,W,T) temporaries
+    # (lever C); same per-component sums in the same order.
+    C = beta_X * (X - L - E) - mult_X + tv_adjoint_affine(beta_f, f, mult_f)
 
     # Phi has a zero eigenvalue at the DC bin -- D*D annihilates constants -- so
     # the beta_X * 1 identity term is the only thing keeping this denominator
