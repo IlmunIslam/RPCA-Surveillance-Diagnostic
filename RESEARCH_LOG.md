@@ -534,6 +534,88 @@ Table I's 0.9019; the likely explanation is in `PAPER_NOTES.md` item 17.
 
 ---
 
+## 7. Phase 3 preflight — first measured full-ADMM run on VIRAT, 2026-09-19
+
+`python -m src.measure_virat_one` on `video_01` (`180x320x300`, [0,1] scale), real
+SS-RTD with `lam = 0.4`, `factor = 1.0`, 100 iterations, launched detached, at
+commit `463de7e` (the `rfftn` change). Outputs in `results/scratch/measure_virat_one/`
+(gitignored; `summary.json`, `history.csv`, `components.npz`,
+`decomposition_frame.png`), log in `logs/measure_virat_one.log`. Peak memory is
+psutil's `peak_wset` — tracked by the OS, not polled.
+
+### 7.1 Memory and time: measured against the projection
+
+| | Projected | **Measured** |
+|---|---|---|
+| Peak working set | 4,300–5,530 MB | **3,512 MB** (final 1,463 MB) |
+| Wall clock, 100 iterations | ~31 min | **35.9 min** (21.5 s/iter mean) |
+| Per iteration | 18–19 s | median **19.8 s**, min 13.5, **max 48.2** |
+
+Memory came in 0.8–2.0 GB **under** the projection: the `rfftn` change did more in
+the full loop than the S-update probe showed (probe peak 2,840 → 2,491 MB; full loop
+never reached the projected range). Time came in 16% **over**, and the profile says
+why (7.2).
+
+### 7.2 The machine pages around the peak — that is the time overrun
+
+Fifteen iterations exceeded 25 s, **all between iterations 6 and 31**, while the
+working set climbed to its 3.5 GB peak; after iteration 31 none did. Checked live
+at iteration ~35:
+
+- machine **7,971 MB** total, **1,455 MB** physical free
+- **commit charge 15,960 / 17,081 MB (93%)** — the pagefile nearly full
+- **430–1,490 pages/sec** during the burst
+- no competing load: the largest other processes were ~250 MB
+
+So the process fits, but the *machine* was paging at the peak with about **1.1 GB
+of commit headroom**. A modest extra spike would be a `MemoryError` mid-batch.
+**Consequence:** the `tv_adjoint` temporary (`beta_f * f - mult_f`, 396 MB) and the
+three `tv_forward(S)` allocations per iteration (396 MB each, in `update_f`,
+`primal_residuals`, `update_multipliers`) are now required levers, not optional
+ones. Planned as separate, individually tested changes.
+
+### 7.3 Batch implication
+
+**180 videos × 35.9 min ≈ 108 h**, before H.264 encoding, at 100 iterations. The
+run did not reach `tol = 1e-6` (`relChg_E` 4.1e-3 at iteration 100) — same as both
+Candela runs — so the 100-iteration cap governs, and `max_iter` is the batch's
+time knob. Per-video timeout in the old runner is 3,600 s; 36 min fits, but the
+48 s iteration spikes show the margin is thin under paging.
+
+Convergence was healthy: `err_X` 177 → 0.58, constraint residual 0.027% of ‖X‖,
+`beta_X` grew on 40/100 iterations to 236, `beta_f` to 7,815.
+
+### 7.4 First look at the research question — S and E share the edges
+
+**One video, one lambda, first look: not a result.** Frame 151 of `video_01`
+(`decomposition_frame.png`):
+
+- `L` is a clean empty-plaza background, as it should be.
+- `E` is **edge residue, not noise.** VIRAT has no injected impulse noise, so `E`
+  has nothing designated to absorb; it lands on the sharp structural edges of the
+  *background* — umbrella rims, stair treads, railings. 82% of pixels nonzero,
+  only 6.6% above 0.05.
+- `S` is **not a clean smooth foreground.** The people on the stairs are visible as
+  blobs, but `S` also carries a broad ±0.02 field over the whole frame and the same
+  background edge structure `E` has. Only 4.0% of pixels exceed 0.05, and **45% of
+  those also have `|E| > 0.05`** — the two components share the sharp edges rather
+  than separating.
+
+If this holds across videos and across `lambda` in [0.2, 1], it is the
+smooth-vs-sharp finding the pivot exists to test: the TV-smooth `S` does not
+cleanly capture sharp surveillance foreground, and the edges leak into both `S`
+and `E`. Phase 3 is what establishes it. Caveats that stand until then: single
+video; `lambda = 0.4` only; clean input with no noise for `E` to do its designated
+job (see the open question below); no ground truth.
+
+**Open question (raised 2026-09-19, not yet decided):** on Candela the paper injects
+10% impulse noise, so `E` has a defined role; on clean VIRAT it has none. Whether
+that makes the clean-input condition unfair to the method, and whether Phase 3
+needs a noise-injected VIRAT condition alongside the clean one, is to be settled
+before the batch is designed.
+
+---
+
 ## Verification provenance
 
 Facts above were checked with, and are reproducible via:

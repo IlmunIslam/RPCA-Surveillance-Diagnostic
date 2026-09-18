@@ -65,13 +65,17 @@ work first.**
 be launched detached (with a watchdog). The notes also cover smoke-testing, resumability
 against the *new* results file, and the per-video timeout.
 
-1. **Memory first.** The projected peak is **4.3-5.4 GB per video on an 8 GB machine** —
-   too tight to start a ~90-hour batch. Try `rfftn`/`irfftn` in the S-update first (no
-   precision cost, but `Phi` must be rebuilt on the half-spectrum and the (a) and (c)
-   tests re-run); use float32 only if that is not enough. See `IMPLEMENTATION_PLAN.md`
-   (g), carry-forward decision 3.
-2. **Measure on one VIRAT video** before starting the batch — the timing and memory
-   figures are projections from Candela, not measurements.
+1. **Memory work — partly done.** The `rfftn`/`irfftn` half-spectrum solve is in
+   (commit `463de7e`, 173 assertions). **Measured on one VIRAT video, 2026-09-19:**
+   peak **3,512 MB** (under the 4.3-5.4 GB projection), **35.9 min/video**, but the
+   machine paged around the peak with commit charge at 93% — see `RESEARCH_LOG.md`
+   §7. **Still to do before the batch:** remove the `tv_adjoint` temporary and the
+   triple `tv_forward(S)` per iteration, each as its own verified change.
+2. **The one-video measurement is done** (`results/scratch/measure_virat_one/`). It
+   also gave a first look at the research question — `S` and `E` sharing sharp
+   edges on clean video — recorded with caveats in `RESEARCH_LOG.md` §7.4 and
+   `PAPER_NOTES.md` item 18. An open question is whether Phase 3 needs a
+   noise-injected VIRAT condition alongside the clean one.
 3. **Follow the output contract** (`IMPLEMENTATION_PLAN.md`): write to new filenames
    (never `all_results.csv` / `param_sweep.csv`), add an explicit `method` column, and log
    every iteration. The old results are frozen in `results/baseline_naive/`.

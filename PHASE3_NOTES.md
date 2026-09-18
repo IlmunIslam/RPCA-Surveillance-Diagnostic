@@ -103,14 +103,18 @@ For Phase 3:
   `results/metrics/ssrtd_real_results.csv` (per the output contract in
   `IMPLEMENTATION_PLAN.md`). ⚠️ Pointed at `all_results.csv`, it would find all 180
   baseline rows and skip every video.
-- **Revisit the 3600 s per-video timeout.** Real SS-RTD is projected at about 31 minutes
-  per video (18-19 s × 100 iterations), and the per-component measurements on a VIRAT
-  tensor add up to about 41 minutes, before the H.264 compression step. A 60-minute limit
-  leaves little headroom.
-- **Memory is the other constraint.** This machine has **7.8 GB** of RAM, and during the
-  original batch only **about 1.3 GB was free** under load. The projected real-SS-RTD peak
-  is 4.3-5.4 GB per video, so do the `rfftn` work first (`IMPLEMENTATION_PLAN.md` (g),
-  decision 3) and close other programs during the run.
+- **Revisit the 3600 s per-video timeout.** Measured 2026-09-19: **35.9 min per video**
+  at 100 iterations (`RESEARCH_LOG.md` §7), before the H.264 step. That fits a
+  60-minute limit, but individual iterations spiked to **48 s** while the machine
+  paged, so the margin is thinner than the mean suggests. Budget the H.264 step
+  before setting the timeout.
+- **Memory is the other constraint — measured, not projected.** This machine has
+  **7.8 GB** of RAM. The full-loop peak is **3,512 MB** per video after the `rfftn`
+  change, yet the machine still paged around that peak: commit charge reached
+  **93%** with ~1.1 GB headroom, and 15 iterations slowed to 25-48 s. Two allocation
+  levers (the `tv_adjoint` temporary; `tv_forward(S)` computed three times per
+  iteration) are being removed before the batch. Close other programs during the
+  run regardless; even 250 MB processes matter at this margin.
 
 ## Not carried over
 

@@ -202,26 +202,33 @@
 
 ## For the Experiments / Results section
 
-4. **TIMING.** Real SS-RTD at literal settings is **~90-95 h for 180 videos**
-   single-threaded (HOOI ~62 h, plus roughly a third again for the FFT solve).
-   Report actual runtime once measured with the full loop.
-   *[IMPLEMENTATION_PLAN.md (b) timing decision and (c) status block]*
+4. **TIMING — now measured.** One full VIRAT video (`180x320x300`, 100
+   iterations, `factor = 1.0`) took **35.9 min** (median 19.8 s/iteration),
+   projecting to **~108 h for 180 videos** before H.264 encoding. 16% over the
+   Candela-based projection because the machine paged around the memory peak.
+   Runs hit the 100-iteration cap rather than the 1e-6 tolerance, on VIRAT as on
+   Candela, so the cap is the effective stopping rule and should be reported as
+   such. *[RESEARCH_LOG.md §7.1, §7.3]*
 
-5. **OPTIMIZATION DISCLOSURE.** Any warm-starting or float32/rfftn optimization
-   adopted at (g) must be reported as a documented deviation with a
-   before/after comparison — not silently absorbed.
-   *[IMPLEMENTATION_PLAN.md (b), (c) carry-forward items]*
+5. **OPTIMIZATION DISCLOSURE.** Any warm-starting or float32 optimization adopted
+   must be reported as a documented deviation with a before/after comparison —
+   not silently absorbed. The `rfftn`/`irfftn` solve adopted 2026-09-19 is **not**
+   a numerical deviation: it is mathematically identical to the full-spectrum
+   solve and was verified so at 1e-12 (`src/test_s_update.py` test 3). One clause
+   in the implementation description suffices.
+   *[IMPLEMENTATION_PLAN.md (g) carry-forward decisions]*
 
 ---
 
 ## For the Limitations section
 
-6. **MEMORY.** 8 GB RAM machine; peak **~2.84 GB for the S-update alone** at
-   full resolution (`180x320x300`, float64). May force float32 (precision cost:
-   float32 reaches ~1e-7 against the paper's 1e-6 stopping criterion) or
-   `rfftn`. Report the final precision and resolution used, and their
-   implications.
-   *[IMPLEMENTATION_PLAN.md (c) status block; `src/test_s_update.py` probe]*
+6. **MEMORY — now measured.** 7.8 GB RAM machine. Full-loop peak working set
+   **3,512 MB** per video at full resolution, float64, after the half-spectrum
+   FFT change — float32 was **not** needed, so precision is unchanged at float64.
+   The machine still paged around the peak (commit charge 93%), which is what
+   drove the timing overrun; two allocation levers follow. Report float64 and the
+   `180x320x300` working resolution as the conditions.
+   *[RESEARCH_LOG.md §7.1, §7.2]*
 
 ---
 
@@ -310,6 +317,23 @@
    data.** See `RESEARCH_LOG.md` §4 item 1.
    *[`src/test_multipliers.py` test 5; `src/ssrtd.py:75,90`; RESEARCH_LOG.md §4
    item 1]*
+
+18. 🔶 **FIRST LOOK: ON CLEAN SURVEILLANCE VIDEO, `S` AND `E` SHARE THE SHARP
+   EDGES.** *One video, one lambda. A first look, NOT a result — Phase 3 decides.*
+
+   Real SS-RTD on VIRAT `video_01` (`lambda = 0.4`, `factor = 1.0`, 100
+   iterations): `L` is a clean background; but `E`, with no injected noise to
+   absorb, lands on the sharp structural edges of the *background* (umbrella rims,
+   stair treads, railings), and `S` — meant to be the TV-smooth foreground —
+   carries the same edge structure plus a broad ±0.02 field, with the walking
+   people visible only as small blobs. **45% of pixels where `|S| > 0.05` also
+   have `|E| > 0.05`**: the components share edges rather than separate.
+
+   If it holds across videos and across `lambda` in [0.2, 1], this is the
+   smooth-vs-sharp finding the pivot exists to test. Until then the caveats are
+   the result: single video; single `lambda`; clean input so `E` has no designated
+   job (the noise-injection question in `RESEARCH_LOG.md` §7.4); no ground truth.
+   *[RESEARCH_LOG.md §7.4; `results/scratch/measure_virat_one/`]*
 
 9. **The baseline retains its value under the new framing.** The collapse
    finding, the parameter-ratio mechanism and the hybrid negative result are all

@@ -340,10 +340,18 @@ gap, resources and the VIRAT projection — is in `RESEARCH_LOG.md` §6.
    outer-iteration counts. If adopted, report as a documented deviation with a
    before/after comparison (`PAPER_NOTES.md` item 5).
 
-3. **Precision / FFT strategy** — deferred from (c). The S-update sets the
-   memory ceiling at 2,840 MB; (d) 2,181 MB and (e) 1,126 MB are below it. Try
-   `rfftn`/`irfftn` first (no precision cost, but `Phi` must be rebuilt on the
-   half-spectrum and (a) re-tested); float32 only if that is not enough.
+3. ✅ **`rfftn`/`irfftn` DONE 2026-09-19, commit `463de7e`; float32 NOT needed.**
+   Half-spectrum solve with `compute_phi_half`, A/B against the retained
+   full-spectrum path at 2.4e-16 to 4.3e-16, closed-form `Phi` oracle at 1.8e-15,
+   173 assertions at unchanged tolerances. Measured on the full loop
+   (`RESEARCH_LOG.md` §7): **peak 3,512 MB** against the 4.3–5.4 GB projection,
+   **35.9 min/video**. But the machine paged around the peak (commit charge at
+   93%, 15 slow iterations up to 48 s), so two further levers are **required**,
+   each as its own verified change: remove the `tv_adjoint(beta_f*f - mult_f)`
+   temporary (396 MB) and compute `tv_forward(S)` once per iteration instead of
+   three times (396 MB each). Original text, for the record: *deferred from (c);
+   the S-update sets the memory ceiling at 2,840 MB; try `rfftn` first, float32
+   only if that is not enough.*
 
 ## VERIFICATION GATE (before ANY VIRAT run) — ✅ PASSED 2026-09-13, see (g2) above
 
