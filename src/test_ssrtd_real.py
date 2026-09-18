@@ -343,6 +343,49 @@ def test_logging_completeness():
     return ok
 
 
+# ---------------------------------------------------------------- test 7
+def test_bitwise_reference():
+    """
+    The memory levers (in-place thresholding, single tv_forward per iteration,
+    affine adjoint, early *_prev release) change ALLOCATION, never arithmetic.
+    So the solver must reproduce, BITWISE, the histories and final state
+    recorded from the pre-lever solver at commit a131d7c on these synthetic
+    tensors (src/testdata/ssrtd_real_reference_a131d7c.*). Any difference at
+    all -- even in the last bit -- means a lever changed the numbers.
+    """
+    import json
+    from pathlib import Path
+    print("\n7. Bitwise reproduction of the pre-lever reference (commit a131d7c)")
+    tdir = Path(__file__).parent / "testdata"
+    ref = np.load(tdir / "ssrtd_real_reference_a131d7c.npz")
+    meta = json.load(open(tdir / "ssrtd_real_reference_a131d7c.json"))["runs"]
+    ok = True
+    for key, m in meta.items():
+        X = ref[f"{key}_X"]
+        r = ssrtd_real(X, lam=m["lam"], max_iter=m["max_iter"], factor=m["factor"])
+
+        cols = m["hist_cols"]
+        hist = np.array([[h[c] for c in cols] for h in r["history"]], dtype=np.float64)
+        grew = np.array([[h["beta_f_grew"], h["beta_X_grew"]] for h in r["history"]], dtype=bool)
+        hist_ok = hist.shape == ref[f"{key}_hist"].shape and hist.tobytes() == ref[f"{key}_hist"].tobytes()
+        grew_ok = np.array_equal(grew, ref[f"{key}_grew"])
+        state_ok = all(r[k].tobytes() == ref[f"{key}_{k}"].tobytes()
+                       for k in ("L", "S", "E", "f", "mult_f", "mult_X"))
+        beta_ok = r["beta_f"] == m["beta_f"] and r["beta_X"] == m["beta_X"]
+        meta_ok = r["n_iter"] == m["n_iter"] and r["converged"] == m["converged"]
+
+        worst = max(float(np.abs(r[k] - ref[f"{key}_{k}"]).max())
+                    for k in ("L", "S", "E", "f", "mult_f", "mult_X"))
+        ok &= check(
+            f"{key}: shape {tuple(m['shape'])}, lam {m['lam']}, {m['max_iter']} iterations",
+            hist_ok and grew_ok and state_ok and beta_ok and meta_ok,
+            f"history bitwise={hist_ok} ({hist.shape[0]}x{hist.shape[1]}), growth flags={grew_ok}, "
+            f"final L/S/E/f/multipliers bitwise={state_ok} (max abs diff {worst:.1e}), "
+            f"betas={beta_ok}, n_iter/converged={meta_ok}",
+        )
+    return ok
+
+
 # ---------------------------------------------------------------- runner
 def main():
     print("=" * 72)
@@ -358,6 +401,7 @@ def main():
         test_synthetic_recovery,
         test_determinism_and_parameters,
         test_logging_completeness,
+        test_bitwise_reference,
     ]
     outcomes = [t() for t in tests]
 
@@ -370,7 +414,7 @@ def main():
 
     print()
     if all(outcomes):
-        print("Component (g1) VERIFIED — all six tests pass.")
+        print("Component (g1) VERIFIED — all seven tests pass.")
         print("(g2) verification gate still REQUIRED before any VIRAT run.")
         return 0
     print("Component (g1) NOT verified.")

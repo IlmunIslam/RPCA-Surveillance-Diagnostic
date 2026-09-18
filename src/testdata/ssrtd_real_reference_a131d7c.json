@@ -1,0 +1,118 @@
+{
+  "source_commit": "a131d7c",
+  "note": "Pre-lever ssrtd_real histories and final state on the test_ssrtd_real synthetic tensors (lam, max_iter, factor per run). Every memory lever must reproduce these BITWISE; generated from the committed a131d7c solver against the unchanged unfold/fold/soft_threshold helpers.",
+  "runs": {
+    "s0": {
+      "seed": 0,
+      "shape": [
+        12,
+        14,
+        8
+      ],
+      "lam": 0.4,
+      "max_iter": 60,
+      "factor": 1.0,
+      "n_iter": 60,
+      "converged": false,
+      "hist_cols": [
+        "iter",
+        "relChg_L",
+        "relChg_S",
+        "relChg_E",
+        "relErr_L",
+        "err_f",
+        "err_X",
+        "beta_f",
+        "beta_X",
+        "obj_E_l1",
+        "obj_S_tv1"
+      ],
+      "beta_f": 786.4586671684593,
+      "beta_X": 27.355084075424685
+    },
+    "s1": {
+      "seed": 1,
+      "shape": [
+        9,
+        11,
+        6
+      ],
+      "lam": 0.4,
+      "max_iter": 40,
+      "factor": 1.0,
+      "n_iter": 40,
+      "converged": false,
+      "hist_cols": [
+        "iter",
+        "relChg_L",
+        "relChg_S",
+        "relChg_E",
+        "relErr_L",
+        "err_f",
+        "err_X",
+        "beta_f",
+        "beta_X",
+        "obj_E_l1",
+        "obj_S_tv1"
+      ],
+      "beta_f": 145.23089398283793,
+      "beta_X": 8.835121435445943
+    },
+    "s2": {
+      "seed": 2,
+      "shape": [
+        12,
+        14,
+        8
+      ],
+      "lam": 0.7,
+      "max_iter": 25,
+      "factor": 1.0,
+      "n_iter": 25,
+      "converged": false,
+      "hist_cols": [
+        "iter",
+        "relChg_L",
+        "relChg_S",
+        "relChg_E",
+        "relErr_L",
+        "err_f",
+        "err_X",
+        "beta_f",
+        "beta_X",
+        "obj_E_l1",
+        "obj_S_tv1"
+      ],
+      "beta_f": 88.01899500719392,
+      "beta_X": 2.6622002270606857
+    },
+    "s3": {
+      "seed": 3,
+      "shape": [
+        6,
+        8,
+        11
+      ],
+      "lam": 0.4,
+      "max_iter": 30,
+      "factor": 1.0,
+      "n_iter": 30,
+      "converged": false,
+      "hist_cols": [
+        "iter",
+        "relChg_L",
+        "relChg_S",
+        "relChg_E",
+        "relErr_L",
+        "err_f",
+        "err_X",
+        "beta_f",
+        "beta_X",
+        "obj_E_l1",
+        "obj_S_tv1"
+      ],
+      "beta_f": 126.6168249641867,
+      "beta_X": 3.82962041479582
+    }
+  }
+}

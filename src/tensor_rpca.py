@@ -28,6 +28,28 @@ def soft_threshold(X, threshold):
     return np.sign(X) * np.maximum(np.abs(X) - threshold, 0)
 
 
+def soft_threshold_inplace(A, threshold):
+    """
+    soft_threshold(A, threshold), computed in place: A is OVERWRITTEN with the
+    result and returned. One temporary of A's size instead of four, which is
+    what makes it the memory lever for the (3, H, W, T) f-update in ssrtd_real.
+
+    Bitwise identical to soft_threshold, including the sign of zero. Where A < 0
+    and the shrunk magnitude is 0 both give -0.0 (sign(A) * 0.0 and
+    copysign(0.0, A)). The one divergence is an input of exactly -0.0:
+    np.sign(-0.0) is +0.0, so soft_threshold returns +0.0 there, while copysign
+    would keep the negative sign. `A += 0.0` first turns -0.0 into +0.0 (IEEE:
+    -0 + +0 = +0) and changes no other value's bits, so the two agree on every
+    input. Only pass an array you own.
+    """
+    A += 0.0
+    mag = np.abs(A)
+    mag -= threshold
+    np.maximum(mag, 0.0, out=mag)
+    np.copysign(mag, A, out=A)
+    return A
+
+
 def tensor_svt(X, threshold):
     """SVT along each mode; average the three refold results."""
     shape = X.shape

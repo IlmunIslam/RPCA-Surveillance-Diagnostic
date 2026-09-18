@@ -32,7 +32,7 @@ from ctypes import wintypes
 import numpy as np
 
 from src.ssrtd_real import tv_forward, update_f
-from src.tensor_rpca import soft_threshold
+from src.tensor_rpca import soft_threshold, soft_threshold_inplace
 
 RTOL = 1e-12
 SHAPES = [(5, 7, 3), (8, 3, 6), (4, 4, 4), (2, 5, 9)]
@@ -311,6 +311,49 @@ def test_degenerate_cases():
     return ok
 
 
+# ---------------------------------------------------------------- test 6
+def test_inplace_soft_threshold():
+    """
+    Memory lever A: update_f now thresholds A in place. The in-place helper must
+    be BITWISE identical to soft_threshold -- values, dtype, and the sign of
+    every zero -- and must actually consume its input rather than copy it.
+    """
+    print("\n6. In-place soft-threshold == soft_threshold, bitwise (memory lever A)")
+    rng = np.random.default_rng(6)
+    ok = True
+    for shape in SHAPES + [(6, 8, 11)]:
+        A = rng.standard_normal((3,) + shape)
+        A.reshape(-1)[:7] = [0.0, -0.0, 0.3, -0.3, 1.0, -1.0, 5.0]   # edge cases
+        for tau in (0.0, 0.3, 0.7, 9.0):
+            ref = soft_threshold(A, tau)
+            work = A.copy()
+            out = soft_threshold_inplace(work, tau)
+
+            same_bits = (ref.tobytes() == out.tobytes())          # incl. -0.0 vs 0.0
+            same_signbit = bool(np.array_equal(np.signbit(ref), np.signbit(out)))
+            consumed = out is work
+            ok &= check(
+                f"shape {shape}, tau {tau}",
+                same_bits and same_signbit and consumed and out.dtype == ref.dtype,
+                f"bytes identical={same_bits}, signbit identical={same_signbit}, "
+                f"returns its input={consumed}, zeros {100*np.mean(out == 0):.0f}%",
+            )
+
+    # end to end: update_f still equals the closed form exactly (test 1 covers the
+    # formula; this pins that the in-place path is the one actually taken)
+    st = _state((5, 7, 3), rng)
+    f, info = update_f(**st, return_info=True)
+    expected = soft_threshold(info["A"], st["lam"] / st["beta_f"])
+    ok &= check(
+        "update_f output bitwise equals soft_threshold(A, tau); info['A'] is a pre-threshold copy",
+        f.tobytes() == expected.tobytes()
+        and float(np.abs(info["A"]).max()) >= float(np.abs(f).max()),
+        f"max|f - expected| = {float(np.abs(f - expected).max()):.1e}; "
+        f"max|A| {float(np.abs(info['A']).max()):.4f} >= max|f| {float(np.abs(f).max()):.4f}",
+    )
+    return ok
+
+
 # ---------------------------------------------------------------- probe
 class _MEMCOUNTERS(ctypes.Structure):
     _fields_ = [("cb", wintypes.DWORD), ("PageFaultCount", wintypes.DWORD),
@@ -393,6 +436,7 @@ def main():
         test_lambda_collision,
         test_anisotropy,
         test_degenerate_cases,
+        test_inplace_soft_threshold,
     ]
     outcomes = [t() for t in tests]
 
@@ -407,7 +451,7 @@ def main():
 
     print()
     if all(outcomes):
-        print("Component (d) VERIFIED — all five tests pass.")
+        print("Component (d) VERIFIED — all six tests pass.")
         return 0
     print("Component (d) NOT verified — fix before moving to (e).")
     return 1

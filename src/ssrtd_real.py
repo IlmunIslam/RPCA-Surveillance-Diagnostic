@@ -31,7 +31,7 @@ import numpy as np
 # tensor_rpca.py and ssrtd.py already define these. soft_threshold there is
 # character-for-character the paper's definition,
 # soft(A, tau) = sign(A) * max(|A| - tau, 0), used by both (d) and (e).
-from src.tensor_rpca import unfold, fold, soft_threshold
+from src.tensor_rpca import unfold, fold, soft_threshold, soft_threshold_inplace
 
 # Axis convention. Tensors are (H, W, T): axis 0 = height, 1 = width, 2 = time.
 #
@@ -505,10 +505,15 @@ def update_f(S, mult_f, lam, beta_f, return_info=False):
     # A = D vec(S) + lambda_f / beta_f     (the shift uses the MULTIPLIER)
     A = tv_forward(S) + mult_f / beta_f
     tau = lam / beta_f                      # the threshold uses the SCALAR
-    f = soft_threshold(A, tau)
+    A_copy = A.copy() if return_info else None   # info["A"]; tests only
+    # In place: A is a fresh (3,H,W,T) array we own, and this stage is the
+    # memory peak of the whole ADMM loop. soft_threshold would allocate four
+    # temporaries of A's size here; the in-place form allocates one. Bitwise
+    # identical (test_f_update test 6).
+    f = soft_threshold_inplace(A, tau)
 
     if return_info:
-        return f, {"A": A, "tau": float(tau),
+        return f, {"A": A_copy, "tau": float(tau),
                    "zero_fraction": float(np.mean(f == 0.0))}
     return f
 
