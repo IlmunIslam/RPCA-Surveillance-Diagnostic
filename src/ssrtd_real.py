@@ -124,6 +124,39 @@ def compute_phi(shape):
     return sum(np.abs(np.fft.fftn(D_delta[i])) ** 2 for i in range(3))
 
 
+def half_shape(shape):
+    """Shape of rfftn output for a real (H, W, T) input: the LAST axis (time)
+    is reduced to T//2 + 1. numpy's rfftn always halves the last axis."""
+    return tuple(shape[:-1]) + (shape[-1] // 2 + 1,)
+
+
+def compute_phi_half(shape):
+    """
+    Phi on the half spectrum, for the rfftn/irfftn form of the eq. (9) solve.
+
+    Same construction as compute_phi -- the eigenvalues of each circulant D_k
+    from the rfftn of its impulse response, |.|^2, summed -- so it stays
+    consistent with tv_forward by construction. Built directly on the half
+    grid, NOT by computing full Phi and slicing, which would allocate the full
+    array and defeat the purpose.
+
+    Analytically, for periodic forward differences
+        Phi[k1,k2,k3] = 4 [ sin^2(pi k1/H) + sin^2(pi k2/W) + sin^2(pi k3/T) ],
+    verified to 1.8e-15 against compute_phi on 2026-09-18 (test_tv_operators
+    test 5 checks this closed form as an oracle independent of this code).
+
+    The DC bin is still present on the half grid (Phi_half.min() == 0), so the
+    beta_X * 1 term in the eq. (9) denominator is still what keeps it invertible.
+
+    shape : (H, W, T)
+    -> (H, W, T//2 + 1) real non-negative array
+    """
+    delta = np.zeros(shape, dtype=np.float64)
+    delta[0, 0, 0] = 1.0
+    D_delta = tv_forward(delta)
+    return sum(np.abs(np.fft.rfftn(D_delta[i])) ** 2 for i in range(3))
+
+
 # ===========================================================================
 # (b) Tucker / HOOI low-rank solver for L -- eq. (3), (8)
 # ===========================================================================
@@ -329,17 +362,32 @@ def hooi(X, ranks=None, n_iter=20, return_history=False, init_Us=None):
 
 
 def update_S(X, L, E, mult_X, f, mult_f, beta_X, beta_f, phi=None,
-             return_info=False):
+             return_info=False, half_spectrum=True):
     """
     Closed-form S-update, eq. (9).
 
     X, L, E, mult_X : (H, W, T)      -- data, low-rank, sparse, and Lambda_X
     f, mult_f       : (3, H, W, T)   -- TV auxiliary and its multiplier lambda_f
     beta_X, beta_f  : positive scalars
-    phi             : (H, W, T) from compute_phi; computed here if omitted, but
-                      the paper notes it "only needs to be calculated once in the
-                      whole algorithm", so hoist it out of the ADMM loop.
+    phi             : precomputed Phi; computed here if omitted, but the paper
+                      notes it "only needs to be calculated once in the whole
+                      algorithm", so hoist it out of the ADMM loop. Must be
+                      compute_phi_half(shape) when half_spectrum is True and
+                      compute_phi(shape) when it is False -- the shape is checked.
+    half_spectrum   : True (default) solves with rfftn/irfftn. C is real, so its
+                      spectrum is conjugate-symmetric and the half grid carries
+                      everything; the two routes are mathematically identical
+                      (test_s_update test 3 asserts agreement at 1e-12). The
+                      half route holds ~half the complex temporaries. False keeps
+                      the original fftn/ifftn path, retained so the A/B test
+                      compares against the real previous implementation.
     -> S, or (S, info) when return_info
+
+    The half route MUST pass s=shape (and axes=) to irfftn: rfftn maps T=10 and
+    T=11 to the same 6 bins, and irfftn without s= reconstructs the wrong
+    length silently. Nothing here computes a norm or energy in the Fourier
+    domain -- the solve is a pointwise division -- so no DC/Nyquist
+    double-counting correction is needed.
 
     Sign convention cross-checks against eq. (8): beta_X(X - L - E) - Lambda_X
     equals beta_X * (X - L - E - Lambda_X/beta_X), and X_tilde in eq. (8) is
@@ -347,8 +395,17 @@ def update_S(X, L, E, mult_X, f, mult_f, beta_X, beta_f, phi=None,
     contradict (8) rather than merely look wrong.
     """
     X = np.asarray(X, dtype=np.float64)
+    shape = X.shape
     if phi is None:
-        phi = compute_phi(X.shape)
+        phi = compute_phi_half(shape) if half_spectrum else compute_phi(shape)
+    expected = half_shape(shape) if half_spectrum else shape
+    if phi.shape != expected:
+        raise ValueError(
+            f"phi has shape {phi.shape} but the {'half' if half_spectrum else 'full'}"
+            f"-spectrum route needs {expected}. Use "
+            f"{'compute_phi_half' if half_spectrum else 'compute_phi'}(shape), "
+            f"or set half_spectrum to match the phi you have."
+        )
 
     C = beta_X * (X - L - E) - mult_X + tv_adjoint(beta_f * f - mult_f)
 
@@ -364,16 +421,24 @@ def update_S(X, L, E, mult_X, f, mult_f, beta_X, beta_f, phi=None,
             f"what keeps beta_X * 1 + beta_f * Phi invertible."
         )
 
-    S_complex = np.fft.ifftn(np.fft.fftn(C) / denom)
-    S = S_complex.real
+    if half_spectrum:
+        Y = np.fft.rfftn(C)                       # (H, W, T//2+1), complex
+        np.divide(Y, denom, out=Y)                # in place: no second complex array
+        S = np.fft.irfftn(Y, s=shape, axes=(0, 1, 2))   # real by construction
+        max_imag = 0.0                            # nothing is discarded on this route
+    else:
+        S_complex = np.fft.ifftn(np.fft.fftn(C) / denom)
+        S = S_complex.real
+        max_imag = float(np.abs(S_complex.imag).max())
 
     if return_info:
         scale = max(float(np.abs(S).max()), 1.0)
         return S, {
             "denom_min": denom_min,
             "denom_max": float(denom.max()),
-            "max_imag": float(np.abs(S_complex.imag).max()),
-            "max_imag_rel": float(np.abs(S_complex.imag).max()) / scale,
+            "max_imag": max_imag,
+            "max_imag_rel": max_imag / scale,
+            "half_spectrum": half_spectrum,
             "C": C,
         }
     return S
@@ -685,7 +750,8 @@ def ssrtd_real(X, lam, max_iter=100, tol=1e-6, factor=E_THRESHOLD_FACTOR,
     beta_f = 1e+1 / mean_X
     beta_X = 4e-1 / mean_X
 
-    phi = compute_phi(shape)        # depends only on shape -- computed once
+    phi = compute_phi_half(shape)   # depends only on shape -- computed once; half
+                                    # spectrum, matching update_S's default route
     ranks_eff = feasible_ranks(shape, ranks)
 
     err_f_prev = err_X_prev = np.inf

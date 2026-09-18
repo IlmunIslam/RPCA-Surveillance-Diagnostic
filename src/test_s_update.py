@@ -6,7 +6,10 @@ Covers src/ssrtd_real.py -- update_S -- against paper/SOURCE.md eq. (9).
 Five tests plus a memory + timing probe:
   1. linear system residual   (beta_X I + beta_f D*D) S == C          (required)
   2. DC bin / constant C      constant C => S == C/beta_X exactly
-  3. real output              discarded imaginary part is negligible
+  3. half vs full spectrum    rfftn/irfftn route == fftn/ifftn route at 1e-12,
+                              incl. odd T; wrong-shaped phi is rejected
+                              (replaces the old "real output" test, which is
+                              vacuous under irfftn -- real by construction)
   4. beta_f = 0 degenerates   S == C/beta_X everywhere
   5. sign / C construction    matches the eq. (8) form of X_tilde
 
@@ -31,7 +34,9 @@ from ctypes import wintypes
 
 import numpy as np
 
-from src.ssrtd_real import compute_phi, tv_forward, tv_adjoint, update_S
+from src.ssrtd_real import (
+    compute_phi, compute_phi_half, half_shape, tv_forward, tv_adjoint, update_S,
+)
 
 RTOL = 1e-12
 SHAPES = [(5, 7, 3), (8, 3, 6), (4, 4, 4), (2, 5, 9)]
@@ -76,7 +81,7 @@ def test_linear_system_residual():
     ok = True
     for shape in SHAPES:
         st = _random_state(shape, rng)
-        phi = compute_phi(shape)
+        phi = compute_phi_half(shape)
         S, info = update_S(**st, phi=phi, return_info=True)
 
         lhs = st["beta_X"] * S + st["beta_f"] * tv_adjoint(tv_forward(S))
@@ -115,7 +120,7 @@ def test_dc_bin_constant_C():
             mult_X=np.zeros(shape), f=zero3, mult_f=zero3,
             beta_X=beta_X, beta_f=beta_f,
         )
-        phi = compute_phi(shape)
+        phi = compute_phi_half(shape)
         S, info = update_S(**st, phi=phi, return_info=True)
 
         expected = np.full(shape, const / beta_X)
@@ -148,20 +153,52 @@ def test_dc_bin_constant_C():
 
 
 # ---------------------------------------------------------------- test 3
-def test_real_output():
-    """C is real and the denominator is real, so S must be real up to round-off."""
-    print("\n3. Real output (discarded imaginary part negligible)")
+def test_half_vs_full_spectrum():
+    """
+    A/B: the rfftn/irfftn route must equal the original fftn/ifftn route.
+
+    rfftn is mathematically exact for real input (the spectrum is conjugate
+    symmetric, so the half grid carries everything), so agreement must be at
+    machine-epsilon scale. This is the property the old "real output" test can
+    no longer guard: irfftn returns real by construction, so max_imag is 0 by
+    definition on the new route. Shapes include odd T, where irfftn without
+    s= would silently return the wrong length.
+    """
+    print("\n3. Half-spectrum (rfftn) route == full-spectrum (fftn) route")
     rng = np.random.default_rng(2)
     ok = True
-    for shape in SHAPES:
+    for shape in SHAPES + [(6, 8, 11), (7, 9, 12)]:
         st = _random_state(shape, rng)
-        S, info = update_S(**st, return_info=True)
+        S_full = update_S(**st, phi=compute_phi(shape), half_spectrum=False)
+        S_half, info = update_S(**st, phi=compute_phi_half(shape),
+                                half_spectrum=True, return_info=True)
+
+        scale = max(float(np.abs(S_full).max()), 1.0)
+        rel = float(np.abs(S_half - S_full).max()) / scale
         ok &= check(
-            f"shape {shape}",
-            info["max_imag_rel"] <= 1e-14 and np.isrealobj(S),
-            f"max|imag| = {info['max_imag']:.3e} "
-            f"(relative {info['max_imag_rel']:.3e}), dtype {S.dtype}",
+            f"shape {shape}{' (odd T)' if shape[2] % 2 else ''}",
+            rel <= RTOL and S_half.shape == shape and np.isrealobj(S_half)
+            and info["half_spectrum"] is True,
+            f"max|S_half - S_full| / scale = {rel:.3e}; shape {S_half.shape} "
+            f"(input {shape}); dtype {S_half.dtype}",
         )
+
+    # the default route is the half-spectrum one, and it is what ssrtd_real uses
+    st = _random_state((5, 7, 3), rng)
+    _, info = update_S(**st, return_info=True)
+    ok &= check("default route is half-spectrum", info["half_spectrum"] is True,
+                "ssrtd_real hoists compute_phi_half and relies on this default")
+
+    # passing the wrong phi shape for the route must fail loudly, not broadcast
+    for phi, half, label in ((compute_phi((5, 7, 3)), True, "full phi to half route"),
+                             (compute_phi_half((5, 7, 3)), False, "half phi to full route")):
+        try:
+            update_S(**st, phi=phi, half_spectrum=half)
+            fired = False
+        except ValueError:
+            fired = True
+        ok &= check(f"{label} raises", fired,
+                    f"phi {phi.shape}, half_spectrum={half}")
     return ok
 
 
@@ -290,9 +327,10 @@ def memory_timing_probe():
               f"(X,L,E,Lambda_X + f,lambda_f = 4x{nbytes:.0f} + 2x{3*nbytes:.0f} MB)")
 
         t0 = time.perf_counter()
-        phi = compute_phi(shape)
+        phi = compute_phi_half(shape)
         t_phi = time.perf_counter() - t0
-        print(f"  compute_phi (once)   : {t_phi:8.2f} s")
+        print(f"  compute_phi_half     : {t_phi:8.2f} s  (once; shape {phi.shape}, "
+              f"{phi.nbytes/2**20:.0f} MB vs {2*phi.nbytes/2**20:.0f} MB full)")
 
         times = []
         for _ in range(3):
@@ -309,11 +347,10 @@ def memory_timing_probe():
         print(f"  S stats              : dtype {S.dtype}, "
               f"range [{S.min():.3f}, {S.max():.3f}]")
         print()
-        print("  Read-across to (g), where the full ADMM holds all of the above")
-        print("  simultaneously plus HOOI factors and FFT temporaries:")
-        print(f"    float64 as measured        : peak ~{peak:.0f} MB")
-        print(f"    float32 would roughly halve : ~{peak/2:.0f} MB")
-        print("    rfftn/irfftn would cut only the complex temporaries (~half of those)")
+        print("  This probe measures update_S alone on top of a 1,390 MB state.")
+        print("  Before the rfftn change it peaked at 2,840 MB (6.33 s/call).")
+        print("  The full-ADMM peak was measured on VIRAT video_01 on 2026-09-19:")
+        print("  3,512 MB, 35.9 min -- see RESEARCH_LOG.md section 7.")
         return True
     except Exception as exc:                     # probe must never fail the suite
         print(f"  probe skipped: {type(exc).__name__}: {exc}")
@@ -331,7 +368,7 @@ def main():
     tests = [
         test_linear_system_residual,
         test_dc_bin_constant_C,
-        test_real_output,
+        test_half_vs_full_spectrum,
         test_beta_f_zero,
         test_sign_convention,
     ]

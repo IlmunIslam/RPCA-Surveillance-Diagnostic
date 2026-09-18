@@ -20,7 +20,9 @@ import sys
 
 import numpy as np
 
-from src.ssrtd_real import tv_forward, tv_adjoint, tv_norm, compute_phi
+from src.ssrtd_real import (
+    tv_forward, tv_adjoint, tv_norm, compute_phi, compute_phi_half, half_shape,
+)
 
 RTOL = 1e-12
 SHAPES = [(5, 7, 3), (4, 4, 4), (8, 3, 6), (2, 5, 9)]
@@ -164,6 +166,47 @@ def test_known_small_case():
     return ok
 
 
+# ---------------------------------------------------------------- test 5
+def phi_closed_form(shape, half):
+    """
+    Analytic Phi for periodic forward differences, independent of the code:
+    each D_k has eigenvalues e^{-2 pi i k/N} - 1, so |.|^2 = 4 sin^2(pi k/N).
+        Phi[k1,k2,k3] = 4 [ sin^2(pi k1/H) + sin^2(pi k2/W) + sin^2(pi k3/T) ]
+    fftfreq gives k/N on the full axes; rfftfreq gives it on the reduced one.
+    """
+    H, W, T = shape
+    s = lambda k: 4.0 * np.sin(np.pi * k) ** 2
+    k3 = np.fft.rfftfreq(T) if half else np.fft.fftfreq(T)
+    return (s(np.fft.fftfreq(H))[:, None, None]
+            + s(np.fft.fftfreq(W))[None, :, None]
+            + s(k3)[None, None, :])
+
+
+def test_phi_half_spectrum():
+    """compute_phi_half against an analytic oracle, and against full Phi sliced."""
+    print("\n5. Half-spectrum Phi: closed form, slice consistency, DC bin, shape")
+    ok = True
+    for shape in SHAPES + [(6, 8, 11), (7, 9, 12)]:
+        ph = compute_phi_half(shape)
+        full = compute_phi(shape)
+
+        vs_closed = float(np.abs(ph - phi_closed_form(shape, half=True)).max())
+        full_vs_closed = float(np.abs(full - phi_closed_form(shape, half=False)).max())
+        vs_slice = float(np.abs(ph - full[:, :, : shape[2] // 2 + 1]).max())
+
+        ok &= check(
+            f"shape {shape}{' (odd T)' if shape[2] % 2 else ''}",
+            ph.shape == half_shape(shape)
+            and vs_closed <= 1e-14 and full_vs_closed <= 1e-14 and vs_slice <= 1e-14
+            and float(ph.min()) == 0.0 and float(ph.max()) <= 12.0 + 1e-12,
+            f"shape {ph.shape}; max|half - closed form| = {vs_closed:.1e}; "
+            f"max|full - closed form| = {full_vs_closed:.1e}; "
+            f"max|half - full[..., :T//2+1]| = {vs_slice:.1e}; "
+            f"DC bin = {ph.min():.1e}; max = {ph.max():.4f} (theory <= 12)",
+        )
+    return ok
+
+
 # ---------------------------------------------------------------- runner
 def main():
     print("=" * 72)
@@ -177,6 +220,7 @@ def main():
         test_phi_matches_direct,
         test_constant_maps_to_zero,
         test_known_small_case,
+        test_phi_half_spectrum,
     ]
     outcomes = [t() for t in tests]
 
@@ -190,7 +234,7 @@ def main():
     print("=" * 72)
 
     if all(outcomes):
-        print("Component (a) VERIFIED — all four tests pass.")
+        print("Component (a) VERIFIED — all five tests pass.")
         return 0
     print("Component (a) NOT verified — fix before moving to (b).")
     return 1
