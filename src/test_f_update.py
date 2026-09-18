@@ -339,6 +339,14 @@ def test_inplace_soft_threshold():
                 f"returns its input={consumed}, zeros {100*np.mean(out == 0):.0f}%",
             )
 
+    # lever B: a precomputed DS gives the same bytes as computing it inside
+    for shape in SHAPES:
+        st = _state(shape, rng)
+        f_a = update_f(**st)
+        f_b = update_f(**st, DS=tv_forward(st["S"]))
+        ok &= check(f"update_f with DS param bitwise identical, shape {shape}",
+                    f_a.tobytes() == f_b.tobytes(), "same bytes with and without DS")
+
     # end to end: update_f still equals the closed form exactly (test 1 covers the
     # formula; this pins that the in-place path is the one actually taken)
     st = _state((5, 7, 3), rng)

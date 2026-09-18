@@ -109,6 +109,26 @@ def test_eq13_correctness():
         f"Lambda_X = 0 - 1.1*5*3 = {nX.flat[0]:.4f} (expect -16.5)",
     )
 
+    # lever B: passing a precomputed DS = tv_forward(S), and the one-temporary
+    # form of the multiplier line, must be BITWISE identical to the formula
+    for shape in SHAPES:
+        st = _state(shape, rng)
+        DS = tv_forward(st["S"])
+        a_f, a_X = update_multipliers(**st)
+        b_f, b_X = update_multipliers(**st, DS=DS)
+        formula = st["mult_f"] - GAMMA * st["beta_f"] * (st["f"] - DS)
+        ok &= check(
+            f"DS param + one-temp form bitwise, shape {shape}",
+            a_f.tobytes() == b_f.tobytes() == formula.tobytes()
+            and a_X.tobytes() == b_X.tobytes(),
+            f"bytes(no DS) == bytes(DS) == bytes(formula): "
+            f"{a_f.tobytes() == b_f.tobytes() == formula.tobytes()}",
+        )
+        e1 = primal_residuals(st["f"], st["S"], st["X"], st["L"], st["E"])
+        e2 = primal_residuals(st["f"], st["S"], st["X"], st["L"], st["E"], DS=DS)
+        ok &= check(f"primal_residuals with DS identical, shape {shape}", e1 == e2,
+                    f"{e1} == {e2}")
+
     # residual norms
     st = _state((6, 5, 4), rng)
     err_f, err_X = primal_residuals(st["f"], st["S"], st["X"], st["L"], st["E"])

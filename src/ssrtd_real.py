@@ -468,7 +468,7 @@ def update_S(X, L, E, mult_X, f, mult_f, beta_X, beta_f, phi=None,
 # argument ordering below, and the explicit guards.
 
 
-def update_f(S, mult_f, lam, beta_f, return_info=False):
+def update_f(S, mult_f, lam, beta_f, return_info=False, DS=None):
     """
     Closed-form f-update, eq. (11) -- the proximal operator of the l1 norm.
 
@@ -503,7 +503,14 @@ def update_f(S, mult_f, lam, beta_f, return_info=False):
         )
 
     # A = D vec(S) + lambda_f / beta_f     (the shift uses the MULTIPLIER)
-    A = tv_forward(S) + mult_f / beta_f
+    # DS may be passed in when the caller already holds tv_forward(S) -- the
+    # ADMM loop computes it once per iteration and shares it (memory lever B).
+    # Built as (mult_f / beta_f) += DS: addition commutes, so the bits equal
+    # DS + mult_f / beta_f, with one fewer (3,H,W,T) temporary at the peak stage.
+    if DS is None:
+        DS = tv_forward(S)
+    A = mult_f / beta_f
+    A += DS
     tau = lam / beta_f                      # the threshold uses the SCALAR
     A_copy = A.copy() if return_info else None   # info["A"]; tests only
     # In place: A is a fresh (3,H,W,T) array we own, and this stage is the
@@ -616,7 +623,7 @@ C1 = 1.15      # penalty growth factor, eq. (14)
 C2 = 0.95      # progress threshold, eq. (14)
 
 
-def primal_residuals(f, S, X, L, E):
+def primal_residuals(f, S, X, L, E, DS=None):
     """
     The two constraint residuals of eq. (6), as norms.
 
@@ -629,13 +636,15 @@ def primal_residuals(f, S, X, L, E):
     eq. (6). This is an inference, not something the paper specifies. Disclosed
     in PAPER_NOTES.md.
     """
-    err_f = float(np.linalg.norm(np.asarray(f - tv_forward(S)).ravel()))
+    if DS is None:                      # lever B: the loop passes tv_forward(S)
+        DS = tv_forward(S)
+    err_f = float(np.linalg.norm(np.asarray(f - DS).ravel()))
     err_X = float(np.linalg.norm(np.asarray(X - L - S - E).ravel()))
     return err_f, err_X
 
 
 def update_multipliers(mult_f, mult_X, f, S, X, L, E, beta_f, beta_X,
-                       gamma=GAMMA):
+                       gamma=GAMMA, DS=None):
     """
     Multiplier updates, eq. (13). Returns new (mult_f, mult_X); inputs unchanged.
 
@@ -643,7 +652,15 @@ def update_multipliers(mult_f, mult_X, f, S, X, L, E, beta_f, beta_X,
     scales the penalty in eq. (14). The two are within 0.05 of each other and
     both multiply something -- keep them straight.
     """
-    new_mult_f = mult_f - gamma * beta_f * (f - tv_forward(S))
+    if DS is None:                      # lever B: the loop passes tv_forward(S)
+        DS = tv_forward(S)
+    # Same operations in the same order as  mult_f - gamma*beta_f*(f - DS):
+    # the scalar gamma*beta_f is formed first either way, then applied to the
+    # residual, then subtracted -- so the bits are identical, with one
+    # (3,H,W,T) temporary instead of three.
+    r = f - DS
+    r *= gamma * beta_f
+    new_mult_f = mult_f - r
     new_mult_X = mult_X - gamma * beta_X * (X - L - S - E)
     return new_mult_f, new_mult_X
 
@@ -778,15 +795,16 @@ def ssrtd_real(X, lam, max_iter=100, tol=1e-6, factor=E_THRESHOLD_FACTOR,
         S = update_S(X, L, E, mult_X, f, mult_f, beta_X, beta_f, phi=phi)
 
         # line 4: f via (11), anisotropic TV
-        f = update_f(S, mult_f, lam, beta_f)
+        DS = tv_forward(S)              # lever B: once per iteration, shared by
+        f = update_f(S, mult_f, lam, beta_f, DS=DS)   # f, residuals, multipliers, log
 
         # line 5: E via (12)
         E = update_E(X, L, S, mult_X, beta_X, factor=factor)
 
         # line 6: multipliers via (13), then penalties via (14)
-        err_f, err_X = primal_residuals(f, S, X, L, E)
+        err_f, err_X = primal_residuals(f, S, X, L, E, DS=DS)
         mult_f, mult_X = update_multipliers(mult_f, mult_X, f, S, X, L, E,
-                                            beta_f, beta_X)
+                                            beta_f, beta_X, DS=DS)
         beta_f, grew_f = update_penalty(beta_f, err_f, err_f_prev)
         beta_X, grew_X = update_penalty(beta_X, err_X, err_X_prev)
         err_f_prev, err_X_prev = err_f, err_X
@@ -816,7 +834,9 @@ def ssrtd_real(X, lam, max_iter=100, tol=1e-6, factor=E_THRESHOLD_FACTOR,
                 "beta_f_grew": grew_f,
                 "beta_X_grew": grew_X,
                 "obj_E_l1": float(np.abs(E).sum()),
-                "obj_S_tv1": float(lam * tv_norm(S)),
+                # == lam * tv_norm(S), which is lam * |tv_forward(S)|.sum();
+                # uses the shared DS instead of a fourth tv_forward(S)
+                "obj_S_tv1": float(lam * np.abs(DS).sum()),
                 "seconds": time.perf_counter() - t0,
             }
             history.append(row)
@@ -824,6 +844,7 @@ def ssrtd_real(X, lam, max_iter=100, tol=1e-6, factor=E_THRESHOLD_FACTOR,
                 print(f"  iter {row['iter']:3d}  relChg_E {row['relChg_E']:.3e}  "
                       f"err_X {row['err_X']:.4f}  beta_X {row['beta_X']:.4f}"
                       f"{' +' if grew_X else '  '}  {row['seconds']:.2f}s")
+        del DS                          # (3,H,W,T): release before the next L/S update
 
     return {"L": L, "S": S, "E": E, "G": G, "Us": Us, "f": f,
             "mult_f": mult_f, "mult_X": mult_X,
