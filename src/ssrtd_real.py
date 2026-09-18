@@ -818,9 +818,17 @@ def ssrtd_real(X, lam, max_iter=100, tol=1e-6, factor=E_THRESHOLD_FACTOR,
         X_tilde = X - S - E - mult_X / beta_X
         G, Us, L = hooi(X_tilde, ranks, n_iter=hooi_iters,
                         init_Us=Us if warm_start else None)
+        del X_tilde
+        # lever D: take relChg_L now and release the previous L, instead of
+        # holding it through the f-update (the memory peak). Same number the
+        # log row used to compute at the end of the iteration.
+        relchg_L = _rel_change(L, L_prev)
+        del L_prev
 
         # line 3: S via (9)
         S = update_S(X, L, E, mult_X, f, mult_f, beta_X, beta_f, phi=phi)
+        relchg_S = _rel_change(S, S_prev)       # lever D, as above
+        del S_prev
 
         # line 4: f via (11), anisotropic TV
         DS = tv_forward(S)              # lever B: once per iteration, shared by
@@ -850,8 +858,8 @@ def ssrtd_real(X, lam, max_iter=100, tol=1e-6, factor=E_THRESHOLD_FACTOR,
         if log:
             row = {
                 "iter": n_iter,
-                "relChg_L": _rel_change(L, L_prev),
-                "relChg_S": _rel_change(S, S_prev),
+                "relChg_L": relchg_L,           # computed right after the L update
+                "relChg_S": relchg_S,           # computed right after the S update
                 "relChg_E": rel_chg,
                 "relErr_L": (_rel_error(L, L_true) if L_true is not None
                              else float("nan")),
