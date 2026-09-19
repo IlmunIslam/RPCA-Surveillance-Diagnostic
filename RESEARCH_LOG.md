@@ -694,6 +694,54 @@ encoding, against the 108 h projected from run 1. float32 remains unnecessary;
 HOOI warm-starting remains off (it would change the numbers). The memory work is
 closed; the next step is the Phase 3 batch runner.
 
+## 8. Phase 3 batch design — decided 2026-09-19
+
+**Decision (author's):** two conditions.
+
+1. **Clean condition, all 180 VIRAT videos.** Real SS-RTD, `factor = 1.0`,
+   `lambda` per the Phase 3 protocol, 100 iterations. This is the realistic
+   surveillance condition and the one the naive-baseline comparison needs (the
+   baseline was run on clean input).
+2. **Noise-injected condition, the 20-video subset the naive-baseline parameter
+   sweep used** (`results/metrics/param_sweep.csv`, `src/param_sweep.select_videos`).
+   The paper's noise model: 10% random-valued impulse noise, as in the Candela
+   gate (`src/gate_candela.add_impulse_noise`, `RESEARCH_LOG.md` §6).
+
+**Why both.** On clean input `E` has no designated job — the paper always
+validates with injected noise — so a reviewer can say the clean run tests the
+method outside its validated regime (§7.4 open question, now settled). The noise
+condition separates two things the clean run confounds: *domain transfer*
+(smooth X-ray foreground → sharp surveillance foreground) from *noise-model
+transfer* (impulse noise present → absent). It also yields measures the clean run
+cannot: recall/precision of `E` on the known corrupted positions, and PSNR of
+`L + S` against the clean frames as ground truth.
+
+**Why the 20-video subset is an adequate sample for condition 2** (checked on
+disk before accepting it). `select_videos()` picks 16 videos evenly spaced by rank
+of `foreground_density` plus the 4 busiest. `foreground_density` is
+method-independent — mean fraction of pixels differing from the temporal median
+by > 0.1, computed from the raw frames in `src/metrics.py` — so the selection
+depends on the data, not on the baseline's decomposition. The 20 sit at rank
+percentiles 1, 7, 13, … 91, 98, 98, 99, 99, 100 of the 180 (density 0.013–4.263,
+median 0.403 vs 0.305 over all 180; 6 of the 17 videos with density > 1.0). For a
+question about sharp foreground, stratifying on the amount of foreground is the
+right axis, and the deliberate over-weighting of busy scenes is where the
+smooth-vs-sharp question is most informative. Caveat to state in the paper: the
+subset is a stratified sample by foreground amount, not a random sample, and
+condition 2 is therefore a 20-video study, not a 180-video one. Reusing the
+sweep's selection also means the two baseline-comparison subsets coincide.
+
+**Rigor rule applied** (`memory: rigor-over-runtime`): the clean condition is
+not subsampled. Cost at the measured ~22 min/video: 180 + 20 = 200 runs ≈ 73 h
+before H.264, plus the per-video H.264 step.
+
+**Runner requirements** (binding, from the output contract and `PHASE3_NOTES.md`):
+new CSV `results/metrics/ssrtd_real_results.csv` with `method` and `condition`
+columns; resume keyed on that file (never on `all_results.csv`); per-video
+timeout budgeted with the H.264 step; watchdog adapted from
+`watchdog_param_sweep.ps1`; smoke test on one video before the batch; detached
+launch per `PHASE3_NOTES.md` §1. Design to be shown before the first run.
+
 ---
 
 ## Verification provenance

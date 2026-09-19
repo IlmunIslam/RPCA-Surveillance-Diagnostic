@@ -58,7 +58,29 @@ python -m src.test_ssrtd_real
 ## The exact next step
 
 **Phase 3: run real SS-RTD with `factor=1.0` on the 180 VIRAT videos.** The memory
-work is done; the next piece of code is the batch runner (item 3 and `PHASE3_NOTES.md`).
+work is done; the batch design is decided (`RESEARCH_LOG.md` §8: clean condition on
+all 180 + noise-injected condition on the 20-video sweep subset); the next piece of
+code is the batch runner (item 3 and `PHASE3_NOTES.md`).
+
+**Handoff for the first session started at the repo root (written 2026-09-19).**
+The previous session ran from the parent folder; `.claude/settings.json` was
+committed in `9eaeeef` and applies only to sessions started here, after the trust
+dialog is accepted. In this order, before anything else:
+
+1. **Verify the deny rules fire, don't assume.** Attempt an Edit on
+   `results/metrics/all_results.csv` and a Bash redirection (`echo x >>
+   results/metrics/all_results.csv`); both must be refused. Show the refusals.
+   Confirm `/status` lists *Project settings* under "Setting sources" (the user runs
+   `/status` and `/permissions`; Claude cannot).
+2. **Local settings files.** On Windows, `.claude/settings.local.json` is read from
+   the start directory, so the parent folder's 60-rule file (`E:\works\Video
+   compression Research\.claude\settings.local.json`, with `Bash(python *)` and
+   `Bash(git push *)`) does **not** apply to repo-root sessions. The repo's own
+   `.claude/settings.local.json` does; it still holds a stale `Bash(git push *)`
+   allow (the committed `ask` rule wins regardless) and three `cd … &&` rules that
+   are dead. Neither file is to be deleted unasked.
+3. **Build the Phase 3 runner** per `RESEARCH_LOG.md` §8 "Runner requirements" and
+   show the design before the first run; smoke-test one video; launch detached.
 
 **Read `PHASE3_NOTES.md` before launching anything long.** Claude Code's
 `run_in_background` has killed jobs about 50 minutes in on this machine, so the batch must
@@ -75,8 +97,8 @@ against the *new* results file, and the per-video timeout.
 2. **The one-video measurement is done** (`results/scratch/measure_virat_one/`). It
    also gave a first look at the research question — `S` and `E` sharing sharp
    edges on clean video — recorded with caveats in `RESEARCH_LOG.md` §7.4 and
-   `PAPER_NOTES.md` item 18. An open question is whether Phase 3 needs a
-   noise-injected VIRAT condition alongside the clean one.
+   `PAPER_NOTES.md` item 18. The noise-injected condition question is settled:
+   `RESEARCH_LOG.md` §8.
 3. **Follow the output contract** (`IMPLEMENTATION_PLAN.md`): write to new filenames
    (never `all_results.csv` / `param_sweep.csv`), add an explicit `method` column, and log
    every iteration. The old results are frozen in `results/baseline_naive/`.
