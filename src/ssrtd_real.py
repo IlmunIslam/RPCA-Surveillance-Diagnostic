@@ -64,6 +64,25 @@ def tv_forward(S):
     return np.stack([np.roll(S, -1, axis=ax) - S for ax in _AXES], axis=0)
 
 
+def tv_forward_into(S, out=None):
+    """
+    tv_forward(S) written component by component into `out` (memory lever E).
+
+    Identical bits: each component is the same roll(S, -1, ax) - S. The
+    difference is allocation -- np.stack holds three rolls, three differences
+    and the stacked copy at once (~800 MB on VIRAT); this holds one rolled copy
+    at a time on top of the output.
+
+    S : (H, W, T); out : (3, H, W, T) or None -> allocated
+    """
+    S = np.asarray(S)
+    if out is None:
+        out = np.empty((3,) + S.shape, dtype=np.result_type(S, np.float64))
+    for i, ax in enumerate(_AXES):
+        np.subtract(np.roll(S, -1, axis=ax), S, out=out[i])
+    return out
+
+
 def tv_adjoint(Z):
     """
     Apply the adjoint D*, mapping the stacked triple back to a single tensor.
@@ -179,8 +198,14 @@ def compute_phi_half(shape):
     """
     delta = np.zeros(shape, dtype=np.float64)
     delta[0, 0, 0] = 1.0
-    D_delta = tv_forward(delta)
-    return sum(np.abs(np.fft.rfftn(D_delta[i])) ** 2 for i in range(3))
+    # One component at a time (lever E): the same roll(delta) - delta,
+    # rfftn, |.|^2 and left-to-right sum as stacking tv_forward(delta) first,
+    # without the (3,H,W,T) stack and three complex arrays alive together.
+    phi = None
+    for ax in _AXES:
+        term = np.abs(np.fft.rfftn(np.roll(delta, -1, axis=ax) - delta)) ** 2
+        phi = term if phi is None else phi + term
+    return phi
 
 
 # ===========================================================================
@@ -545,7 +570,12 @@ def update_f(S, mult_f, lam, beta_f, return_info=False, DS=None):
     # memory peak of the whole ADMM loop. soft_threshold would allocate four
     # temporaries of A's size here; the in-place form allocates one. Bitwise
     # identical (test_f_update test 6).
-    f = soft_threshold_inplace(A, tau)
+    # One stacked component at a time (lever E): the threshold is elementwise,
+    # so thresholding A[0], A[1], A[2] in turn is the same operation with a
+    # (H,W,T) magnitude temporary instead of a (3,H,W,T) one.
+    for i in range(3):
+        soft_threshold_inplace(A[i], tau)
+    f = A
 
     if return_info:
         return f, {"A": A_copy, "tau": float(tau),
@@ -672,9 +702,11 @@ def primal_residuals(f, S, X, L, E, DS=None):
 
 
 def update_multipliers(mult_f, mult_X, f, S, X, L, E, beta_f, beta_X,
-                       gamma=GAMMA, DS=None):
+                       gamma=GAMMA, DS=None, inplace=False):
     """
-    Multiplier updates, eq. (13). Returns new (mult_f, mult_X); inputs unchanged.
+    Multiplier updates, eq. (13). Returns new (mult_f, mult_X); inputs unchanged
+    unless inplace=True, in which case mult_f and mult_X are overwritten and
+    returned (lever E; only the ADMM loop, which owns them, asks for this).
 
     gamma scales the MULTIPLIER step and is 1.1. It is not c1 (1.15), which
     scales the penalty in eq. (14). The two are within 0.05 of each other and
@@ -688,8 +720,21 @@ def update_multipliers(mult_f, mult_X, f, S, X, L, E, beta_f, beta_X,
     # (3,H,W,T) temporary instead of three.
     r = f - DS
     r *= gamma * beta_f
+    # The X residual as the same left-to-right chain ((X - L) - S) - E, one
+    # (H,W,T) temporary instead of three (lever E).
+    rX = X - L
+    rX -= S
+    rX -= E
+    rX *= gamma * beta_X
+    if inplace:
+        # Lever E: the ADMM loop owns its multipliers and rebinds them, so it
+        # updates in place -- no old/new pair alive together. `a -= r` gives the
+        # same bits as `a - r`.
+        mult_f -= r
+        mult_X -= rX
+        return mult_f, mult_X
     new_mult_f = mult_f - r
-    new_mult_X = mult_X - gamma * beta_X * (X - L - S - E)
+    new_mult_X = mult_X - rX
     return new_mult_f, new_mult_X
 
 
@@ -831,7 +876,7 @@ def ssrtd_real(X, lam, max_iter=100, tol=1e-6, factor=E_THRESHOLD_FACTOR,
         del S_prev
 
         # line 4: f via (11), anisotropic TV
-        DS = tv_forward(S)              # lever B: once per iteration, shared by
+        DS = tv_forward_into(S)         # lever B: once per iteration, shared by
         f = update_f(S, mult_f, lam, beta_f, DS=DS)   # f, residuals, multipliers, log
 
         # line 5: E via (12)
@@ -840,7 +885,8 @@ def ssrtd_real(X, lam, max_iter=100, tol=1e-6, factor=E_THRESHOLD_FACTOR,
         # line 6: multipliers via (13), then penalties via (14)
         err_f, err_X = primal_residuals(f, S, X, L, E, DS=DS)
         mult_f, mult_X = update_multipliers(mult_f, mult_X, f, S, X, L, E,
-                                            beta_f, beta_X, DS=DS)
+                                            beta_f, beta_X, DS=DS,
+                                            inplace=True)   # lever E
         beta_f, grew_f = update_penalty(beta_f, err_f, err_f_prev)
         beta_X, grew_X = update_penalty(beta_X, err_X, err_X_prev)
         err_f_prev, err_X_prev = err_f, err_X

@@ -347,6 +347,23 @@ def test_inplace_soft_threshold():
         ok &= check(f"update_f with DS param bitwise identical, shape {shape}",
                     f_a.tobytes() == f_b.tobytes(), "same bytes with and without DS")
 
+    # lever E: thresholding the three stacked components one at a time is
+    # bitwise the whole-array threshold (the operation is elementwise)
+    for shape in SHAPES + [(6, 8, 11)]:
+        A = rng.standard_normal((3,) + shape)
+        A.reshape(-1)[:4] = [0.0, -0.0, 0.3, -0.3]
+        for tau in (0.3, 0.7):
+            whole = soft_threshold_inplace(A.copy(), tau)
+            per = A.copy()
+            for i in range(3):
+                soft_threshold_inplace(per[i], tau)
+            ok &= check(
+                f"per-component threshold bitwise, shape {shape}, tau {tau}",
+                whole.tobytes() == per.tobytes()
+                and bool(np.array_equal(np.signbit(whole), np.signbit(per))),
+                "bytes and signbits identical between whole-array and per-component",
+            )
+
     # end to end: update_f still equals the closed form exactly (test 1 covers the
     # formula; this pins that the in-place path is the one actually taken)
     st = _state((5, 7, 3), rng)

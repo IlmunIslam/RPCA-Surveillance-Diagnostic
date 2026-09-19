@@ -117,12 +117,30 @@ def test_eq13_correctness():
         a_f, a_X = update_multipliers(**st)
         b_f, b_X = update_multipliers(**st, DS=DS)
         formula = st["mult_f"] - GAMMA * st["beta_f"] * (st["f"] - DS)
+        formula_X = st["mult_X"] - GAMMA * st["beta_X"] * (
+            st["X"] - st["L"] - st["S"] - st["E"])
         ok &= check(
             f"DS param + one-temp form bitwise, shape {shape}",
             a_f.tobytes() == b_f.tobytes() == formula.tobytes()
-            and a_X.tobytes() == b_X.tobytes(),
+            and a_X.tobytes() == b_X.tobytes() == formula_X.tobytes(),
             f"bytes(no DS) == bytes(DS) == bytes(formula): "
-            f"{a_f.tobytes() == b_f.tobytes() == formula.tobytes()}",
+            f"f {a_f.tobytes() == b_f.tobytes() == formula.tobytes()}, "
+            f"X {a_X.tobytes() == b_X.tobytes() == formula_X.tobytes()}",
+        )
+        # lever E: default leaves the inputs untouched; inplace=True overwrites
+        # them with the same bytes and returns the same objects
+        mf0, mX0 = st["mult_f"].tobytes(), st["mult_X"].tobytes()
+        untouched = (st["mult_f"].tobytes() == mf0 and st["mult_X"].tobytes() == mX0)
+        mf_obj, mX_obj = st["mult_f"], st["mult_X"]
+        c_f, c_X = update_multipliers(**st, DS=DS, inplace=True)
+        ok &= check(
+            f"inplace=True bitwise + same objects; default non-mutating, shape {shape}",
+            untouched and c_f is mf_obj and c_X is mX_obj
+            and c_f.tobytes() == formula.tobytes()
+            and c_X.tobytes() == formula_X.tobytes(),
+            f"default left inputs untouched={untouched}; inplace returns its inputs="
+            f"{c_f is mf_obj and c_X is mX_obj}; bytes == formula: "
+            f"f {c_f.tobytes() == formula.tobytes()}, X {c_X.tobytes() == formula_X.tobytes()}",
         )
         e1 = primal_residuals(st["f"], st["S"], st["X"], st["L"], st["E"])
         e2 = primal_residuals(st["f"], st["S"], st["X"], st["L"], st["E"], DS=DS)

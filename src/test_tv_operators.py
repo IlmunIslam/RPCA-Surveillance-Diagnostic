@@ -4,11 +4,13 @@ Unit tests for Phase 1 component (a): the TV difference operators and Phi.
 Covers src/ssrtd_real.py -- tv_forward, tv_adjoint, tv_norm, compute_phi --
 against paper/SOURCE.md eq. (4) and (9).
 
-Four tests:
+Six tests:
   1. adjoint identity   <D x, y> == <x, D* y>            (required by plan)
   2. Phi vs direct      ifftn(Phi * fftn(x)) == D*D x    (required by plan)
   3. constant -> zero   D(const) == 0 exactly            (catches non-periodic edges)
   4. known small case   hand-checked values + axis mapping
+  5. half-spectrum Phi  closed form, slice of full Phi, DC bin (rfftn memory work)
+  6. lever E bitwise    tv_forward_into and per-component Phi_half == replaced forms
 
 Shapes are deliberately non-cubic so an axis mix-up cannot pass by symmetry.
 
@@ -21,7 +23,8 @@ import sys
 import numpy as np
 
 from src.ssrtd_real import (
-    tv_forward, tv_adjoint, tv_norm, compute_phi, compute_phi_half, half_shape,
+    tv_forward, tv_forward_into, tv_adjoint, tv_norm, compute_phi,
+    compute_phi_half, half_shape,
 )
 
 RTOL = 1e-12
@@ -207,6 +210,40 @@ def test_phi_half_spectrum():
     return ok
 
 
+# ---------------------------------------------------------------- test 6
+def test_lever_e_bitwise():
+    """Lever E forms are byte-for-byte the expressions they replaced."""
+    print("\n6. Lever E: tv_forward_into and per-component Phi_half are bitwise")
+    rng = np.random.default_rng(6)
+    ok = True
+    for shape in SHAPES + [(6, 8, 11)]:
+        S = rng.standard_normal(shape)
+        ref = tv_forward(S)
+
+        # (i) fresh output
+        got = tv_forward_into(S)
+        same_fresh = got.shape == ref.shape and got.tobytes() == ref.tobytes()
+
+        # (ii) preallocated output, pre-filled with garbage, returned as-is
+        out = np.full((3,) + shape, np.nan)
+        ret = tv_forward_into(S, out=out)
+        same_out = ret is out and out.tobytes() == ref.tobytes()
+
+        # (iii) Phi_half per component == the stacked form it replaced
+        D_delta = tv_forward(np.eye(1, np.prod(shape)).reshape(shape))
+        stacked = sum(np.abs(np.fft.rfftn(D_delta[i])) ** 2 for i in range(3))
+        ph = compute_phi_half(shape)
+        same_phi = ph.shape == stacked.shape and ph.tobytes() == stacked.tobytes()
+
+        ok &= check(
+            f"shape {shape}{' (odd T)' if shape[2] % 2 else ''}",
+            same_fresh and same_out and same_phi,
+            f"tv_forward_into fresh bitwise={same_fresh}; into out bitwise={same_out}; "
+            f"Phi_half per-component bitwise={same_phi}",
+        )
+    return ok
+
+
 # ---------------------------------------------------------------- runner
 def main():
     print("=" * 72)
@@ -221,6 +258,7 @@ def main():
         test_constant_maps_to_zero,
         test_known_small_case,
         test_phi_half_spectrum,
+        test_lever_e_bitwise,
     ]
     outcomes = [t() for t in tests]
 
@@ -234,7 +272,7 @@ def main():
     print("=" * 72)
 
     if all(outcomes):
-        print("Component (a) VERIFIED — all five tests pass.")
+        print("Component (a) VERIFIED — all six tests pass.")
         return 0
     print("Component (a) NOT verified — fix before moving to (b).")
     return 1
