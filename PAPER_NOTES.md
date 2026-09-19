@@ -213,10 +213,13 @@
 
 5. **OPTIMIZATION DISCLOSURE.** Any warm-starting or float32 optimization adopted
    must be reported as a documented deviation with a before/after comparison —
-   not silently absorbed. The `rfftn`/`irfftn` solve adopted 2026-09-19 is **not**
-   a numerical deviation: it is mathematically identical to the full-spectrum
-   solve and was verified so at 1e-12 (`src/test_s_update.py` test 3). One clause
-   in the implementation description suffices.
+   not silently absorbed. The `rfftn`/`irfftn` solve adopted 2026-09-19 is
+   mathematically identical to the full-spectrum solve (verified at 1e-12 per call,
+   `src/test_s_update.py` test 3) and every paper-facing quantity of the Candela
+   gate reproduces to its printed precision on it (`RESEARCH_LOG.md` §6.6) — but the
+   iteration amplifies rounding, so trajectories are not bitwise across FFT
+   implementations. Say so in the reproducibility statement: results reproduce to
+   the reported precision, not to the bit, across FFT/BLAS builds and machines.
    *[IMPLEMENTATION_PLAN.md (g) carry-forward decisions]*
 
 ---

@@ -362,6 +362,99 @@ gap, resources and the VIRAT projection — is in `RESEARCH_LOG.md` §6.
    (c); the S-update sets the memory ceiling at 2,840 MB; try `rfftn` first,
    float32 only if that is not enough.*
 
+### (h) Phase 3 batch runner — DESIGN, proposed 2026-09-19, not yet approved or built
+
+Implements `RESEARCH_LOG.md` §8 under the output contract above. Three files.
+
+**`src/phase3_worker.py` — one run, one process.** Arguments: `--video-id`,
+`--condition {clean,impulse10}`, `--factor`, `--lam`, `--seed`, `--out-dir`. Steps:
+load the video through `src.preprocessing` exactly as `measure_virat_one` does
+(first 300 frames, grey, 320x180, `/255`); `foreground_density` from the raw frames
+(`src.metrics.compute_foreground_density`, the method-independent measure §8
+relies on); for `impulse10`, `gate_candela.add_impulse_noise(X, 0.10, seed, scale=1.0)`
+and keep the clean `X` for ground truth; `ssrtd_real(lam, factor=factor,
+max_iter=100, tol=1e-6, log=True)`; metrics; H.264; artifacts; `summary.json` last
+(its presence marks the run complete). psutil `peak_wset` is recorded. The worker
+never touches the results CSV.
+
+**`src/phase3_runner.py` — the loop, the only CSV writer.** Builds the plan, skips
+runs already in the CSV, launches one worker per run as a subprocess with a
+timeout, appends one CSV row per successful worker from its `summary.json`. A
+pid lock file refuses a second runner instance (`PHASE3_NOTES.md`: never two
+writers). Failed/timed-out runs go to `logs/phase3_errors.log` and are skipped;
+`--retry-failed` re-queues them. `--smoke` runs the smoke plan into a scratch
+directory; `--arms` selects arms.
+
+**`watchdog_phase3.ps1`** — `watchdog_param_sweep.ps1` with the process match
+changed to `src\.phase3_runner`, the target read from `results/ssrtd_real/plan.csv`
+(written by the runner at first start), and the relaunch command changed. Same
+60 s poll, same give-up after 4 relaunches without a new row.
+
+**Plan (run = video × condition × factor × lambda × seed).** `lambda = 0.4` for
+every arm (the paper's value; the only one the gate validated). Arms, in execution
+order, so the three arms on the shared 20-video subset finish first (~21 h) and
+analysis can start while the remaining 160 clean videos run:
+
+| arm | videos | condition | factor | seed | runs | ~hours |
+|---|---|---|---|---|---|---|
+| `clean-subset` | the 20 of `param_sweep.select_videos()` | clean | 1.0 | – | 20 | 7 |
+| `noise-subset` | same 20 | impulse10 | 1.0 | 0 | 20 | 7 |
+| `factor2-subset` | same 20 | clean | 2.0 | – | 20 | 7 (if approved) |
+| `clean-rest` | the other 160 | clean | 1.0 | – | 160 | 59 |
+
+The runner asserts that `select_videos()` returns exactly the 20 `video_id`s in
+the frozen `results/metrics/param_sweep.csv` (read-only) before building the plan.
+
+**Resume key:** `(video_id, condition, factor, lam, seed)` in
+`results/metrics/ssrtd_real_results.csv`. A run whose `summary.json` exists but
+whose row is missing (crash between worker exit and append) is appended, not
+re-run.
+
+**Timeout:** 3,600 s per worker. Measured: ADMM ~22 min (run 3), noise injection
+1 s, metrics and five H.264 encodes ~2 min; the 2.5x margin covers the paging
+regime seen in run 1 (iterations to 48 s) without letting a hung run eat a night.
+
+**CSV columns** (`method = ssrtd_real` in every row; no `ssrtd_*` prefix):
+`method, condition, arm, video_id, original_filename, factor, lam, seed,
+noise_ratio, H, W, T, foreground_density, n_iter, converged, admm_seconds,
+total_seconds, peak_wset_mb, relChg_L_final, relChg_S_final, relChg_E_final,
+err_f_final, err_X_final, beta_f_final, beta_X_final, beta_X_grew_n,
+l1_L, l1_S, l1_E, S_nonzero_pct, E_nonzero_pct, S_gt001_pct, S_gt005_pct,
+E_gt001_pct, E_gt005_pct, SE_overlap_005 (share of |S|>0.05 pixels with |E|>0.05),
+psnr_LS_vs_X, ssim_LS_vs_X, psnr_L_vs_X, ssim_L_vs_X,
+X_crf23_kb, X_crf28_kb, L_crf28_kb, S_crf28_kb, E_crf28_kb, LS_crf28_kb,
+S_signed_crf28_kb, E_signed_crf28_kb, psnr_LS_after_h264, ssim_LS_after_h264,
+E_recall, E_precision, E_recall_detectable, E_recall_005, E_precision_005,
+psnr_noisy_vs_clean, psnr_LS_vs_clean, ssim_LS_vs_clean, psnr_L_vs_clean,
+commit, numpy_version, processed_at`.
+Noise-only columns are empty for clean rows. `psnr_LS_vs_X` is the proper
+reconstruction measure (the old 217 dB compared `X` with `L+S+N`, i.e. the
+constraint residual). H.264 for the signed components: the old pipeline encoded
+`S`/`N` with `(x*255).clip(0,255)`, which discards the negative half; that mapping
+is kept (`S_crf28_kb`, `E_crf28_kb`) for comparability with the baseline columns,
+and a signed mapping `((x+1)/2*255)` is reported beside it.
+
+**Per-run artifacts** in `results/ssrtd_real/runs/<video>__<condition>__f<factor>__lam<lam>__s<seed>/`
+(~5 MB; 220 runs ≈ 1.1 GB; disk has 18.9 GB free, so full `S`/`E` tensors are NOT
+kept): `history.csv` (per-iteration log, contract), `summary.json`, `L_tucker.npz`
+(core and factors — `L` exactly, 0.75 MB instead of 66), `supports.npz` (packbits of
+`|S|>tau`, `|E|>tau` for tau in {0.01, 0.05}; per-frame l1 of `S` and `E`),
+`noise_mask.npz` (packbits; noise runs), `frame.png` (mid frame: X, L, S, E, and
+noisy/mask for noise runs). Full float32 `S`/`E` are saved only for a figure list
+(`video_01`, the highest- and lowest-density videos of the subset).
+
+**Smoke test before the batch** (`--smoke`, output under `results/scratch/phase3_smoke/`,
+never the real CSV): `video_01` clean and `video_01` impulse10. Pass criteria: the
+clean run's `L`, `S`, `E` and history are **bitwise** those of run 3
+(`results/scratch/measure_virat_one_after_lever_E/`, same solver call); the noise
+run's `E_recall`, `E_precision`, `psnr_*_vs_clean` are finite and
+`psnr_LS_vs_clean > psnr_noisy_vs_clean`; the worker's wall time and `peak_wset`
+are recorded and the timeout re-checked against them; the CSV row has every column.
+
+**Launch:** detached per `PHASE3_NOTES.md` §1 (`Start-Process cmd.exe … python -u -m
+src.phase3_runner >> logs\phase3_runner.log`), then the watchdog, also detached.
+Both are `ask`-gated in `.claude/settings.json`.
+
 ## VERIFICATION GATE (before ANY VIRAT run) — ✅ PASSED 2026-09-13, see (g2) above
 
 Reproduce the paper's own behavior on a public benchmark before trusting the implementation:

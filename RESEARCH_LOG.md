@@ -504,10 +504,45 @@ over that stretch. It decays by the end (factor 1.0: 0.0010 at iteration 80 agai
 paper's 0.0005, and 0.0002 at 100), so C3b passes. The gap is larger than the ~0.003
 accuracy of reading values off the plot, so it is not a digitization artifact.
 
-**Not explained.** Possible causes, none tested: HOOI details the paper does not specify
-(how the 20 inner iterations are initialized at each outer iteration, or whether they
-warm-start), or a difference in how the authors computed relChg_L. Does not block Phase 3,
-but should be reported alongside the Fig. 3 reproduction rather than omitted.
+**Investigated 2026-09-19 (before the batch). Explained on our side; the gap with
+Fig. 3 is not attributable to anything the paper specifies.**
+
+*What the plateau is.* Over iterations 12–100, `relChg_L` tracks the multiplier step
+that the L-update receives: `relChg_L ≈ γ·err_X/‖X‖_F` (log-log correlation 0.97
+for factor 1.0, 0.91 for 2.0; ratio 0.5–1.7 across the run, 0.98 at iteration 100;
+‖X‖_F = 382,897). `beta_X` starts at 4e-1/mean(X) = 0.0032 and is still only 0.05
+at iteration 40, so the X-constraint is enforced slowly: `err_X` is ~9,000 at
+iteration 12 and ~2,300 at 41, and each iteration moves the L-update's input by
+γ·(X−L−S−E)/β_X — about 1% of ‖X‖ — which the Tucker projection passes through.
+`relChg_L` cannot fall below that until `err_X` does, and `err_X` decays slowly
+until `beta_X` has grown. That is the plateau, and it is a property of Algorithm 1
+with the paper's initial penalties, not of our implementation choices.
+
+*What it is not.* The one thing Algorithm 1 leaves unspecified — how the HOOI inner
+solve is run at each outer iteration — was tested directly
+(`src/probe_relchg_L.py`, gate input, factor 1.0): warm-starting the Tucker factors
+between outer iterations, and running 100 inner iterations instead of 20, both leave
+`relChg_L` unchanged to 1.5e-4 at every iteration (median over 15–40: 0.0102 in all
+three; `relErr_L`, `relChg_S` and `err_X` likewise unchanged to the printed digits).
+Ruled out.
+
+*Why the paper's curve differs is not determinable from the paper.* `relChg_S`,
+which is driven by the same residual dynamics, matches Fig. 3 point for point, and
+the end state matches (`relErr_L` 0.0137 vs ~0.0125–0.013); so the residual dynamics
+themselves agree with the authors' run and the difference is confined to how the
+plotted `relChg_L` relates to `L` — e.g. the authors' exact definition or
+normalisation of that one quantity, or an implementation detail of theirs on the
+L side that is not in the text. Confidence: high (>90%) that our plateau is the
+mechanism above and not a defect; moderate (~70%) that the gap is definitional or
+implementation-specific on the authors' side, because every other measured curve
+and the final state agree. It cannot be raised further without the authors' code.
+
+*For the manuscript.* Report it as observed: "relChg_L in our run levels at ≈0.01
+over iterations 15–40 where Fig. 3 shows ≈0.002; in our implementation this
+reflects the slow enforcement of the X-constraint at the paper's initial β_X, is
+insensitive to the HOOI inner solve, and does not affect the final state or the S
+curve, both of which match the paper; we could not identify the source of the
+difference from the published description." Does not block Phase 3.
 
 ### 6.4 Measured resources, and the VIRAT projection
 
@@ -531,6 +566,62 @@ Standard PSNR 42.83 dB (factor 1.0) / 42.66 dB (factor 2.0) against Table I's 43
 within 0.44 / 0.61 dB. The formula as printed would give -7.2 / -7.4 dB on the same
 result, confirming `PAPER_NOTES.md` item 15 on real data. SSIM 0.9939 / 0.9937 against
 Table I's 0.9019; the likely explanation is in `PAPER_NOTES.md` item 17.
+
+### 6.6 Gate re-run on the current solver, 2026-09-19: PASS, final state reproduced, trajectory not bitwise
+
+`python -m src.gate_candela --factor both --out results/scratch/gate_candela_rerun_85f7eaf`
+at commit `85f7eaf` (after `rfftn` and levers A–E), same input (sha256 `a29ed8e4…`),
+seed, lambda and settings as §6. Log `logs/gate_candela_rerun_85f7eaf.log`. The
+a796ae6 outputs in `results/gate_candela/` were left untouched and are the comparison.
+
+**Both factors PASS all criteria.** Every quantity the §6.1 decision rested on
+reproduces to the printed precision:
+
+| | a796ae6 | 85f7eaf |
+|---|---|---|
+| relErr_L at iteration 1 (both factors) | 0.0628 | **0.0628** (relChg_L 1.54e-15) |
+| Final relErr_L, factor 1.0 / 2.0 | 0.0137 / 0.0140 | **0.0137 / 0.0140** |
+| relChg_S at 30 / 50, factor 1.0 | 0.0100 / 0.0033 | **0.0100 / 0.0033** |
+| relChg_S at 30 / 50, factor 2.0 | 0.0146 / 0.0055 | **0.0146 / 0.0055** |
+| Final relChg_L, factor 1.0 / 2.0 | 2.24e-4 / 1.40e-3 | 1.84e-4 / 1.41e-3 |
+| Final err_X, factor 1.0 / 2.0 | 79.7 / 280.5 | 75.2 / 290.4 |
+
+**The trajectories are not bitwise.** Against the a796ae6 histories the re-run is
+identical to 4 printed decimals through iteration ~30 and then drifts: relative
+difference in `err_X` 1.5e-7 at iteration 40, 4e-4 at 50, 2e-3 at 60, 3.5e-2 at
+100 (factor 2.0; factor 1.0 the same shape, first exceeding 1e-6 at iteration 42).
+No `beta_f`/`beta_X` growth decision differs at any iteration for either factor.
+
+**Attribution — confirmed, not argued.** `src/probe_gate_fullspectrum.py` runs the
+same factor-2.0 solve at `85f7eaf` with the S-update forced onto the retained
+full-spectrum path (`update_S(..., half_spectrum=False)`). Result: **bitwise
+identical to a796ae6 through iteration 30**, max relative difference in `err_X`
+2.1e-16 over all 100 iterations, relChg_S at worst 1.6e-13 (iteration 99). So levers
+A–E are exact against the gate as well as against the a131d7c reference, and the
+only source of the drift is the half-spectrum solve (`463de7e`), whose per-call
+agreement with the full path is ~3e-16 relative — not 0.
+
+**Mechanism.** The ADMM iteration amplifies rounding-level differences: the rfftn
+deviation is ~1e-16 at iteration 2, 1e-13 by 14, 1e-10 by 28, 1e-6 by 44, 1e-3 by
+60, 3.5e-2 by 100 — roughly ×10 per 4–5 iterations early, ×10 per ~20 iterations
+late. The full-spectrum probe shows the same growth law from a later seed: its
+first last-ulp difference appears near iteration 50 and reaches 1e-13 by 99. This
+is ordinary numerical sensitivity of a 100-iteration non-smooth iteration
+(soft thresholds, adaptive penalties), not a defect and not a flipped decision.
+
+**Consequences.**
+- The `rfftn` change is still not a numerical deviation in the sense that matters
+  (identical mathematics; all paper-facing quantities reproduce to their printed
+  precision), but it is *not* trajectory-preserving to the bit. `PAPER_NOTES.md`
+  item 5 is corrected accordingly.
+- **Reproducibility claim for the manuscript:** results reproduce to the reported
+  precision (2–3 significant figures in the late-iteration diagnostics, all
+  criteria) but not bitwise across FFT implementations, BLAS builds or machines.
+  Bitwise reproduction (§7.5–7.7, `test_ssrtd_real` test 7) holds only for the same
+  numpy build on the same code path, and that is what it is used for.
+- The batch runs on the half-spectrum path; nothing here changes its numbers'
+  validity. The a796ae6 outputs stay as the gate record; the re-run outputs stay
+  in scratch.
 
 ---
 

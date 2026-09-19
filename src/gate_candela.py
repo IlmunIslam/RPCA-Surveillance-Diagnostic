@@ -269,11 +269,21 @@ def load_ground_truth(gt_path, T):
     return np.repeat(gt.astype(np.float64)[:, :, None], T, axis=2)
 
 
-def add_impulse_noise(X_clean, ratio, seed):
+def add_impulse_noise(X_clean, ratio, seed, scale=255.0):
     """
     Paper IV-A1: in EACH frame, a fraction `ratio` of pixel positions (chosen
     without replacement) is REPLACED by a uniform random integer in [0, 255].
     Not salt-and-pepper, and not additive.
+
+    scale: the value the integer 255 maps to. 255.0 for the paper's Candela scale
+    (the default; the random stream and every stored value are unchanged). 1.0 for
+    VIRAT tensors, whose frames are uint8 grey divided by 255.0 -- the corrupted
+    values are then the same integers divided by 255.0, so they lie on exactly the
+    grid the clean values lie on, as they do on Candela.
+
+    Returns (X_noisy, mask) with mask True at the corrupted positions. The mask is
+    what the E recall/precision measures are computed against, and is saved by
+    every run that uses it.
     """
     rng = np.random.default_rng(seed)
     H, W, T = X_clean.shape
@@ -282,7 +292,10 @@ def add_impulse_noise(X_clean, ratio, seed):
     mask = np.zeros(X.shape, dtype=bool)
     for t in range(T):
         rows, cols = np.unravel_index(rng.choice(H * W, size=k, replace=False), (H, W))
-        X[rows, cols, t] = rng.integers(0, 256, size=k).astype(np.float64)
+        vals = rng.integers(0, 256, size=k).astype(np.float64)
+        if scale != 255.0:
+            vals = vals / 255.0 * scale
+        X[rows, cols, t] = vals
         mask[rows, cols, t] = True
     return X, mask
 
