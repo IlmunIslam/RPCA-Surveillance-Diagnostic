@@ -57,20 +57,21 @@ python -m src.test_ssrtd_real
 
 ## The exact next step
 
-**Phase 3: run real SS-RTD with `factor=1.0` on the 180 VIRAT videos — but do the memory
-work first.**
+**Phase 3: run real SS-RTD with `factor=1.0` on the 180 VIRAT videos.** The memory
+work is done; the next piece of code is the batch runner (item 3 and `PHASE3_NOTES.md`).
 
 **Read `PHASE3_NOTES.md` before launching anything long.** Claude Code's
 `run_in_background` has killed jobs about 50 minutes in on this machine, so the batch must
 be launched detached (with a watchdog). The notes also cover smoke-testing, resumability
 against the *new* results file, and the per-video timeout.
 
-1. **Memory work — partly done.** The `rfftn`/`irfftn` half-spectrum solve is in
-   (commit `463de7e`, 173 assertions). **Measured on one VIRAT video, 2026-09-19:**
-   peak **3,512 MB** (under the 4.3-5.4 GB projection), **35.9 min/video**, but the
-   machine paged around the peak with commit charge at 93% — see `RESEARCH_LOG.md`
-   §7. **Still to do before the batch:** remove the `tv_adjoint` temporary and the
-   triple `tv_forward(S)` per iteration, each as its own verified change.
+1. **Memory work — DONE 2026-09-19.** The `rfftn`/`irfftn` half-spectrum solve
+   (`463de7e`) plus five allocation-only levers (`0be5c23` … `342e4d5`), each gated
+   on **bitwise** reproduction of the pre-change solver (`test_ssrtd_real` test 7;
+   248 assertions across seven suites). **Measured on one VIRAT video:** peak
+   **3,512 → 2,663 MB**, **35.9 → ~22 min/video**, no paging — `RESEARCH_LOG.md`
+   §7.1–§7.7. Batch projection ~66 h for 180 videos at 100 iterations, before H.264.
+   float32 not needed; HOOI warm-start still off.
 2. **The one-video measurement is done** (`results/scratch/measure_virat_one/`). It
    also gave a first look at the research question — `S` and `E` sharing sharp
    edges on clean video — recorded with caveats in `RESEARCH_LOG.md` §7.4 and

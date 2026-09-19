@@ -103,18 +103,18 @@ For Phase 3:
   `results/metrics/ssrtd_real_results.csv` (per the output contract in
   `IMPLEMENTATION_PLAN.md`). ⚠️ Pointed at `all_results.csv`, it would find all 180
   baseline rows and skip every video.
-- **Revisit the 3600 s per-video timeout.** Measured 2026-09-19: **35.9 min per video**
-  at 100 iterations (`RESEARCH_LOG.md` §7), before the H.264 step. That fits a
-  60-minute limit, but individual iterations spiked to **48 s** while the machine
-  paged, so the margin is thinner than the mean suggests. Budget the H.264 step
-  before setting the timeout.
+- **Revisit the 3600 s per-video timeout.** Measured 2026-09-19 after the memory
+  work: **~22 min per video** at 100 iterations (`RESEARCH_LOG.md` §7.7), before the
+  H.264 step; no iteration above 18 s. (Before the allocation levers it was 35.9 min
+  with iterations spiking to 48 s while the machine paged — that is what a
+  memory-starved run looks like in the log.) Budget the H.264 step before setting
+  the timeout.
 - **Memory is the other constraint — measured, not projected.** This machine has
-  **7.8 GB** of RAM. The full-loop peak is **3,512 MB** per video after the `rfftn`
-  change, yet the machine still paged around that peak: commit charge reached
-  **93%** with ~1.1 GB headroom, and 15 iterations slowed to 25-48 s. Two allocation
-  levers (the `tv_adjoint` temporary; `tv_forward(S)` computed three times per
-  iteration) are being removed before the batch. Close other programs during the
-  run regardless; even 250 MB processes matter at this margin.
+  **7.8 GB** of RAM. The full-loop peak is **2,663 MB** per video after the `rfftn`
+  change and levers A–E (`RESEARCH_LOG.md` §7.5–§7.7), down from 3,512 MB, at which
+  the machine paged (commit charge 93%). Headroom is now roughly 2 GB. Close other
+  programs during the run regardless; if iterations start exceeding ~25 s in the
+  log, the machine is paging again — check commit charge before anything else.
 
 ## Not carried over
 

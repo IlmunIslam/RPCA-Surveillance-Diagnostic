@@ -203,12 +203,13 @@
 ## For the Experiments / Results section
 
 4. **TIMING — now measured.** One full VIRAT video (`180x320x300`, 100
-   iterations, `factor = 1.0`) took **35.9 min** (median 19.8 s/iteration),
-   projecting to **~108 h for 180 videos** before H.264 encoding. 16% over the
-   Candela-based projection because the machine paged around the memory peak.
-   Runs hit the 100-iteration cap rather than the 1e-6 tolerance, on VIRAT as on
-   Candela, so the cap is the effective stopping rule and should be reported as
-   such. *[RESEARCH_LOG.md §7.1, §7.3]*
+   iterations, `factor = 1.0`) takes **~22 min** (median 12.3 s/iteration) after
+   the allocation work, projecting to **~66 h for 180 videos** before H.264
+   encoding. (The first measurement was 35.9 min because the machine paged around
+   the memory peak; the allocation changes removed the paging without changing a
+   single number.) Runs hit the 100-iteration cap rather than the 1e-6 tolerance,
+   on VIRAT as on Candela, so the cap is the effective stopping rule and should be
+   reported as such. *[RESEARCH_LOG.md §7.1, §7.3, §7.5, §7.7]*
 
 5. **OPTIMIZATION DISCLOSURE.** Any warm-starting or float32 optimization adopted
    must be reported as a documented deviation with a before/after comparison —
@@ -223,12 +224,12 @@
 ## For the Limitations section
 
 6. **MEMORY — now measured.** 7.8 GB RAM machine. Full-loop peak working set
-   **3,512 MB** per video at full resolution, float64, after the half-spectrum
-   FFT change — float32 was **not** needed, so precision is unchanged at float64.
-   The machine still paged around the peak (commit charge 93%), which is what
-   drove the timing overrun; two allocation levers follow. Report float64 and the
-   `180x320x300` working resolution as the conditions.
-   *[RESEARCH_LOG.md §7.1, §7.2]*
+   **2,663 MB** per video at full resolution, float64, after the half-spectrum
+   FFT change and five allocation-only levers (3,512 → 3,187 → 2,663 MB), all
+   verified bitwise against the pre-change solver — float32 was **not** needed, so
+   precision is unchanged at float64, and none of the memory work is a numerical
+   deviation. Report float64 and the `180x320x300` working resolution as the
+   conditions. *[RESEARCH_LOG.md §7.1, §7.2, §7.5–§7.7]*
 
 ---
 

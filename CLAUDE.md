@@ -79,7 +79,8 @@ killed about 50 minutes in on this machine, so long runs must be launched detach
 
 ## Current status
 
-Phase 1 complete: real SS-RTD built and unit-tested (162 assertions, seven suites), and
-the Candela verification gate passed, reproducing the paper's Fig. 3. Next is Phase 3 —
-the 180-video VIRAT run with `factor=1.0` — after the `rfftn` memory work, since the
-projected 4.3-5.4 GB per video is tight on 7.8 GB of RAM. See `START_HERE.md`.
+Phase 1 complete: real SS-RTD built and unit-tested (248 assertions, seven suites), and
+the Candela verification gate passed, reproducing the paper's Fig. 3. The memory work
+is done (peak 2,663 MB, ~22 min per video, every change verified bitwise). Next is
+Phase 3 — the batch runner for the 180-video VIRAT run with `factor=1.0`. See
+`START_HERE.md`.

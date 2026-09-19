@@ -614,6 +614,86 @@ that makes the clean-input condition unfair to the method, and whether Phase 3
 needs a noise-injected VIRAT condition alongside the clean one, is to be settled
 before the batch is designed.
 
+### 7.5 Memory levers A–D: same numbers, 3,187 MB and 21.4 min (run 2, 2026-09-19)
+
+Four allocation-only changes, each its own commit, each gated on **bitwise**
+reproduction of a reference computed with the pre-lever solver (commit `a131d7c`,
+stored in `src/testdata/ssrtd_real_reference_a131d7c.{npz,json}`, checked by
+`test_ssrtd_real` test 7 on four synthetic runs, 25–60 iterations). Every number the
+solver produces is unchanged; only the allocations are.
+
+| Lever | Commit | What changed |
+|---|---|---|
+| A | `0be5c23` | `update_f` thresholds `A` in place (`soft_threshold_inplace`, `tensor_rpca.py`; `A += 0.0` first so `-0.0` inputs match `np.sign`) |
+| B | `140c759` | `tv_forward(S)` once per iteration, passed as `DS` to `update_f`, `primal_residuals`, `update_multipliers`; one-temp `mult_f` line |
+| C | `5092863` | `tv_adjoint_affine(beta_f, f, mult_f)` accumulates per component; no `(3,H,W,T)` `beta_f*f - mult_f` temporary |
+| D | `98be388` | `X_tilde` freed after HOOI; `L_prev`/`S_prev` freed right after their `relChg` |
+
+Run 2 (`results/scratch/measure_virat_one_after_levers/`, commit `98be388`), same
+video, same settings as run 1:
+
+| | Run 1 (`463de7e`) | **Run 2 (`98be388`)** |
+|---|---|---|
+| Peak working set | 3,512 MB | **3,187 MB** |
+| Wall clock, 100 iterations | 35.9 min | **21.4 min** (12.87 s/iter mean) |
+| Per iteration | median 19.8 s, max 48.2 | median **12.4 s**, max **15.0**, none above 25 s |
+| Commit charge at peak | 93% (1,455 MB free) | 87% (2,142 MB free at iter ~12) |
+
+`history.csv` and the final `L`, `S`, `E` are **bitwise identical** between the two
+runs (`relErr_L` is all-NaN in both — compare with `equal_nan`). The 40% time saving
+is the paging going away plus the two dropped `tv_forward` calls, not any change in
+arithmetic. Peak fell only 325 MB, because A–D mostly cut non-peak stages; the
+per-stage profile (7.6) found where the peak actually is.
+
+### 7.6 Per-stage profile after A–D: the multiplier update is the peak
+
+One full-size iteration (`180x320x300`), `tracemalloc` with `reset_peak()` between
+stages, numpy allocations only (the OS working set adds interpreter + BLAS buffers):
+
+- **Resident loop state: 1,517 MB** — `X, L, S, E, mult_X` (5 × 132 MB), `f, mult_f`
+  (2 × 396 MB), `phi` 66 MB, `E_prev` 132 MB, HOOI factors.
+- Transients above resident: `compute_phi_half` 923 MB (once, at init), `X_tilde` 396,
+  HOOI 306, `update_S` 659, `tv_forward → DS` 791, `update_f` 791 (on 1,781 resident
+  incl. `DS`), `update_E` 527, `primal_residuals` 396, **`update_multipliers` 1,055 MB
+  on 1,913 resident → ~2.97 GB, the peak stage**, log row 396.
+
+The multiplier stage peaks because the old and new `mult_f` (396 MB each) coexist
+while the chained `X - L - S - E` builds three `(H,W,T)` temporaries. `update_f`
+and `DS` still stack three rolls before differencing. These are lever E (7.7).
+
+### 7.7 Lever E: peak 2,663 MB, same numbers (run 3, 2026-09-19)
+
+Commit `342e4d5`, four more allocation-only changes in `src/ssrtd_real.py`, gated the
+same way (bitwise reference, new bitwise tests in three suites, 248 assertions):
+`update_multipliers(inplace=True)` for the loop (chained `X - L - S - E` in one
+temporary; multipliers overwritten instead of old/new pairs coexisting; default
+stays non-mutating), per-component `soft_threshold_inplace` in `update_f`,
+`tv_forward_into` writing `DS` one roll at a time, and per-component
+`compute_phi_half`.
+
+Run 3 (`results/scratch/measure_virat_one_after_lever_E/`, log
+`logs/measure_virat_one_after_lever_E.log`), same video and settings:
+
+| | Run 1 `463de7e` | Run 2 `98be388` | **Run 3 `342e4d5`** |
+|---|---|---|---|
+| Peak working set | 3,512 MB | 3,187 MB | **2,663 MB** (final 1,479 MB) |
+| Wall clock, 100 iterations | 35.9 min | 21.4 min | **21.9 min** |
+| Per iteration | mean 21.4 s, max 48.2 | mean 12.7 s, max 15.0 | mean **13.0 s**, median 12.3, max 18.1, none > 25 s |
+
+All three runs agree **bitwise** on every `history.csv` column except `seconds` and
+on the final `L`, `S`, `E` (`components.npz`). Lever E is a memory lever only — the
+0.5 min wall-clock difference against run 2 is run-to-run noise.
+
+**Where this leaves the batch.** Peak is now 849 MB below run 1 and about 0.85 GB
+under the ~3.5 GB at which this machine paged, so commit headroom during the batch
+is roughly 2 GB instead of 1.1 GB. That meets the target set for this work (peak
+comfortably below ~2.6 GB — 2,663 MB is at the line, with the working-set number
+including ~200 MB of interpreter and BLAS overhead the numpy profile does not
+count). Time: **180 videos × ~22 min ≈ 66 h** at 100 iterations, before H.264
+encoding, against the 108 h projected from run 1. float32 remains unnecessary;
+HOOI warm-starting remains off (it would change the numbers). The memory work is
+closed; the next step is the Phase 3 batch runner.
+
 ---
 
 ## Verification provenance

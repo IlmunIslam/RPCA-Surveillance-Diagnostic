@@ -340,18 +340,27 @@ gap, resources and the VIRAT projection — is in `RESEARCH_LOG.md` §6.
    outer-iteration counts. If adopted, report as a documented deviation with a
    before/after comparison (`PAPER_NOTES.md` item 5).
 
-3. ✅ **`rfftn`/`irfftn` DONE 2026-09-19, commit `463de7e`; float32 NOT needed.**
-   Half-spectrum solve with `compute_phi_half`, A/B against the retained
-   full-spectrum path at 2.4e-16 to 4.3e-16, closed-form `Phi` oracle at 1.8e-15,
-   173 assertions at unchanged tolerances. Measured on the full loop
-   (`RESEARCH_LOG.md` §7): **peak 3,512 MB** against the 4.3–5.4 GB projection,
-   **35.9 min/video**. But the machine paged around the peak (commit charge at
-   93%, 15 slow iterations up to 48 s), so two further levers are **required**,
-   each as its own verified change: remove the `tv_adjoint(beta_f*f - mult_f)`
-   temporary (396 MB) and compute `tv_forward(S)` once per iteration instead of
-   three times (396 MB each). Original text, for the record: *deferred from (c);
-   the S-update sets the memory ceiling at 2,840 MB; try `rfftn` first, float32
-   only if that is not enough.*
+3. ✅ **Memory work DONE 2026-09-19; float32 NOT needed.** Measured on the full
+   loop on `video_01` (`RESEARCH_LOG.md` §7), all three runs bitwise identical
+   in every solver output:
+   - `rfftn`/`irfftn` half-spectrum solve, commit `463de7e` — A/B against the
+     retained full-spectrum path at 2.4e-16 to 4.3e-16, closed-form `Phi` oracle
+     at 1.8e-15. **Peak 3,512 MB, 35.9 min/video**, but the machine paged around
+     the peak (commit charge 93%, 15 iterations up to 48 s).
+   - Allocation levers A–D, commits `0be5c23`, `140c759`, `5092863`, `98be388`
+     (in-place f threshold; `tv_forward(S)` once per iteration; per-component
+     `tv_adjoint_affine`; early release of `X_tilde`/`L_prev`/`S_prev`). **Peak
+     3,187 MB, 21.4 min/video**, no iteration above 25 s.
+   - Lever E, commit `342e4d5` (in-place multipliers with one chained residual
+     temporary; per-component threshold; `tv_forward_into`; per-component
+     `compute_phi_half`). **Peak 2,663 MB, 21.9 min/video.**
+
+   Each lever is gated on bitwise reproduction of the pre-lever reference
+   (`src/testdata/ssrtd_real_reference_a131d7c.*`, `test_ssrtd_real` test 7);
+   248 assertions across the seven suites. Batch projection: ~66 h for 180 videos
+   at 100 iterations, before H.264. Original text, for the record: *deferred from
+   (c); the S-update sets the memory ceiling at 2,840 MB; try `rfftn` first,
+   float32 only if that is not enough.*
 
 ## VERIFICATION GATE (before ANY VIRAT run) — ✅ PASSED 2026-09-13, see (g2) above
 
