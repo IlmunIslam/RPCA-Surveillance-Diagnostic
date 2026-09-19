@@ -70,8 +70,14 @@ dialog is accepted. In this order, before anything else:
 1. **Verify the deny rules fire, don't assume.** Attempt an Edit on
    `results/metrics/all_results.csv` and a Bash redirection (`echo x >>
    results/metrics/all_results.csv`); both must be refused. Show the refusals.
-   Confirm `/status` lists *Project settings* under "Setting sources" (the user runs
-   `/status` and `/permissions`; Claude cannot).
+   **If either one is NOT refused, stop and report before doing anything else** —
+   a guardrail that reports itself active while doing nothing is worse than none
+   (author's instruction, 2026-09-19). Confirm `/status` lists *Project settings*
+   under "Setting sources" (the user runs `/status` and `/permissions`; Claude
+   cannot). Both local settings files have already been dealt with: the repo's
+   `.claude/settings.local.json` was trimmed to nine harmless rules (stale
+   `git push` allow and dead `cd` rules removed); the parent folder's file is left
+   in place deliberately.
 2. **Local settings files.** On Windows, `.claude/settings.local.json` is read from
    the start directory, so the parent folder's 60-rule file (`E:\works\Video
    compression Research\.claude\settings.local.json`, with `Bash(python *)` and
