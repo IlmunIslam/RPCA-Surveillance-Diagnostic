@@ -56,6 +56,11 @@ downsampled to 320x180. Annotations in `data/annotations/`. `data/` is gitignore
 
 ## Running things
 
+**Start Claude Code in this directory (the repo root), not in its parent.**
+`.claude/settings.json` — the accept-edits mode, the allow list, and the deny rules
+that guard the frozen baseline CSVs — is read only from the directory the session
+starts in, and its path rules are anchored there (`ARCHIVE_BASELINE.md` §7).
+
 All compute runs locally. Tests are plain scripts, not pytest:
 
 ```
@@ -76,6 +81,9 @@ killed about 50 minutes in on this machine, so long runs must be launched detach
 - Paths derive from `PROJECT_DIR = Path(__file__).parent.parent`; never hardcode absolute
   paths.
 - Nothing is "done" until verified against `paper/SOURCE.md` or the paper's own results.
+- `notes/` is the author's thinking space (reading notes, drafts, reviewer-response
+  planning). It is **not** part of the record: never cite it as a decision or a
+  result, and never copy record content into it. See `notes/README.md`.
 
 ## Current status
 

@@ -184,3 +184,24 @@ SS-RTD, never the `ssrtd_*` prefix.
    runner must also key its resume check on the new file:
    `src/batch_runner.py` hard-codes `all_results.csv`, and pointed there it would
    see all 180 baseline rows and skip every video (`PHASE3_NOTES.md` §3).
+
+## 7. Editor guardrail on the frozen files (added 2026-09-19)
+
+`.claude/settings.json` (committed) carries three `deny` rules:
+
+```
+Edit(/results/baseline_naive/**)
+Edit(/results/metrics/all_results.csv)
+Edit(/results/metrics/param_sweep.csv)
+```
+
+What they cover: Claude Code's own file tools (Edit, Write, NotebookEdit), the file
+commands it recognizes in a shell command (`cat`, `sed`, `tee`, …) and the target of
+a shell redirection (`> file`, `>> file`) naming those paths. What they do **not**
+cover: a Python script that opens one of those paths itself, `pandas.to_csv`, or any
+other process writing the file indirectly. So this is a **guardrail against
+accidental edits during a session, not a boundary**. The immutability evidence
+remains the SHA256 hashes in §5, and the rule that no pipeline writes to these
+paths remains a rule of the code (`IMPLEMENTATION_PLAN.md` output contract), not of
+the editor. The paths are anchored at the directory Claude Code is started in, so
+start it at the repo root (`CLAUDE.md`, "Running things").

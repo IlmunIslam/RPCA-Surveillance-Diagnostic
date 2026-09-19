@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "defaultMode": "acceptEdits",
+    "allow": [
+      "Bash(python -m src.*)",
+      "Bash(python -u -m src.*)",
+      "Bash(python -c *)",
+      "Bash(python - *)",
+      "Bash(pip install *)",
+      "Bash(python -m pip install *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git rev-parse *)",
+      "PowerShell(pip install *)",
+      "PowerShell(Get-CimInstance *)"
+    ],
+    "ask": [
+      "Bash(git push *)",
+      "PowerShell(Start-Process *)",
+      "PowerShell(Stop-Process *)"
+    ],
+    "deny": [
+      "Edit(/results/baseline_naive/**)",
+      "Edit(/results/metrics/all_results.csv)",
+      "Edit(/results/metrics/param_sweep.csv)"
+    ]
+  }
+}
