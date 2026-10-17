@@ -85,8 +85,10 @@ dialog is accepted. In this order, before anything else:
    `.claude/settings.local.json` does; it still holds a stale `Bash(git push *)`
    allow (the committed `ask` rule wins regardless) and three `cd … &&` rules that
    are dead. Neither file is to be deleted unasked.
-3. **Build the Phase 3 runner** per `RESEARCH_LOG.md` §8 "Runner requirements" and
-   show the design before the first run; smoke-test one video; launch detached.
+3. ✅ **The Phase 3 runner is built and smoke-tested** (`RESEARCH_LOG.md` §9,
+   `IMPLEMENTATION_PLAN.md` (h)). **Nothing of the batch has run.** What remains is
+   the author's launch decision, then: launch `src.phase3_runner` detached and the
+   watchdog after it (`PHASE3_NOTES.md`, "Running the Phase 3 batch").
 
 **Read `PHASE3_NOTES.md` before launching anything long.** Claude Code's
 `run_in_background` has killed jobs about 50 minutes in on this machine, so the batch must

@@ -362,7 +362,12 @@ gap, resources and the VIRAT projection — is in `RESEARCH_LOG.md` §6.
    (c); the S-update sets the memory ceiling at 2,840 MB; try `rfftn` first,
    float32 only if that is not enough.*
 
-### (h) Phase 3 batch runner — DESIGN, proposed 2026-09-19, not yet approved or built
+### (h) Phase 3 batch runner — ✅ BUILT and SMOKE-TESTED 2026-10-18
+
+> Approved 2026-10-17 with two additions (the FFT-path robustness check, §7.8, and
+> the environment manifest). Built, smoke-tested twice, three defects found and
+> fixed — `RESEARCH_LOG.md` §9. **No batch run has been launched.** The design below
+> is as built, with the measured artifact sizes.
 
 Implements `RESEARCH_LOG.md` §8 under the output contract above. Three files.
 
@@ -435,13 +440,17 @@ is kept (`S_crf28_kb`, `E_crf28_kb`) for comparability with the baseline columns
 and a signed mapping `((x+1)/2*255)` is reported beside it.
 
 **Per-run artifacts** in `results/ssrtd_real/runs/<video>__<condition>__f<factor>__lam<lam>__s<seed>/`
-(~5 MB; 220 runs ≈ 1.1 GB; disk has 18.9 GB free, so full `S`/`E` tensors are NOT
-kept): `history.csv` (per-iteration log, contract), `summary.json`, `L_tucker.npz`
-(core and factors — `L` exactly, 0.75 MB instead of 66), `supports.npz` (packbits of
-`|S|>tau`, `|E|>tau` for tau in {0.01, 0.05}; per-frame l1 of `S` and `E`),
-`noise_mask.npz` (packbits; noise runs), `frame.png` (mid frame: X, L, S, E, and
-noisy/mask for noise runs). Full float32 `S`/`E` are saved only for a figure list
-(`video_01`, the highest- and lowest-density videos of the subset).
+— **measured 2026-10-17 on the smoke run: 2.16 MB** per ordinary run, so 220 runs
+≈ 0.5 GB plus 0.9 GB for the six figure runs ≈ **1.4 GB** against 18.9 GB free:
+`history.csv` (per-iteration log, contract — 24 KB), `summary.json`, `L_tucker.npz`
+(core and factors — `L` exactly, 332 KB instead of 66 MB), `supports.npz` (packbits
+of `|S|>tau`, `|E|>tau` for tau in {0.01, 0.05}, plus per-frame l1 of `S` and `E` —
+1.3 MB), `noise_mask.npz` (packbits; noise runs), and the eight H.264 mp4s (590 KB,
+kept so a size can be re-measured without re-encoding). Full float32 `L`/`S`/`E`
+(`components.npz`, **160 MB** — not the 5 MB first estimated) are saved only for
+`FIGURE_VIDEOS`: `video_01` (density 4.263, busiest of all 180), `video_108`
+(3.128) and `video_165` (0.013, emptiest of the subset) — the extremes the Phase 5
+decomposition and smooth-vs-sharp figures need, so no figure requires re-solving.
 
 **Smoke test before the batch** (`--smoke`, output under `results/scratch/phase3_smoke/`,
 never the real CSV): `video_01` clean and `video_01` impulse10. Pass criteria: the

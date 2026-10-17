@@ -330,14 +330,47 @@
    absorb, lands on the sharp structural edges of the *background* (umbrella rims,
    stair treads, railings), and `S` — meant to be the TV-smooth foreground —
    carries the same edge structure plus a broad ±0.02 field, with the walking
-   people visible only as small blobs. **45% of pixels where `|S| > 0.05` also
-   have `|E| > 0.05`**: the components share edges rather than separate.
+   people visible only as small blobs. On the displayed frame, **about half of the
+   pixels where `|S| > 0.05` also have `|E| > 0.05`**: the components share edges
+   rather than separate.
 
-   If it holds across videos and across `lambda` in [0.2, 1], this is the
+   **Quantified over the whole tensor 2026-10-17** (recomputed from the saved
+   components, which is what Phase 3 records per run): `|S| > 0.05` on 16.98% of
+   voxels, `|E| > 0.05` on 5.25%, and **12.67% of the S-claimed voxels are also
+   E-claimed**. Per frame the overlap ranges **2.2% to 54.3%** (mean 22.8%, median
+   24.7%), and the frame used for the figure sits near the top at 48.6%. Two
+   consequences: quote the whole-tensor number, not a single frame's, and report the
+   per-frame spread — a single-frame figure is not representative. (The §7.4 text's
+   "4.0% of pixels exceed 0.05, and 45% of those" does not reproduce exactly from
+   the stored components, which give 2.5% and 48.6% for that frame; the stored
+   arrays are authoritative and Phase 3 computes these from them.)
+
+   **ROBUST TO THE NUMERICS.** Because the ADMM amplifies rounding (§6.6), the same
+   solve was repeated with the S-update on the full spectrum instead of the half
+   spectrum (`measure_virat_one --full-spectrum`, `video_01`, same lambda and
+   factor). Component-level relative differences are 1.9e-3 (`L`), 3.1e-3 (`S`),
+   3.1e-2 (`E`) — yet every statistic the finding rests on is unchanged:
+
+   | | half spectrum | full spectrum | rel. diff |
+   |---|---|---|---|
+   | S-claimed voxels (`|S| > 0.05`) | 2,934,597 | 2,934,725 | 0.004% |
+   | E-claimed voxels (`|E| > 0.05`) | 906,813 | 907,012 | 0.022% |
+   | S∩E share of S-claimed | 12.672% | 12.673% | 0.014% |
+   | `E` nonzero | 78.92% | 78.63% | 0.37% |
+   | l1 mass `L` / `S` / `E` | 7.74e6 / 5.79e5 / 1.99e5 | same to 0.036% | ≤0.036% |
+
+   Individual voxels do move across the cut — 2.5% of E-claimed and 0.21% of
+   S-claimed voxels flip category at 0.05 — but the flips cancel, so the
+   *aggregates* are stable to a fraction of a percent. State it that way: the
+   population-level claim is numerically robust; per-voxel membership at a hard
+   threshold is not, so no claim should rest on individual voxels.
+
+   If the aggregate holds across videos and across `lambda` in [0.2, 1], this is the
    smooth-vs-sharp finding the pivot exists to test. Until then the caveats are
    the result: single video; single `lambda`; clean input so `E` has no designated
-   job (the noise-injection question in `RESEARCH_LOG.md` §7.4); no ground truth.
-   *[RESEARCH_LOG.md §7.4; `results/scratch/measure_virat_one/`]*
+   job (settled by the noise condition, `RESEARCH_LOG.md` §8); no ground truth.
+   *[RESEARCH_LOG.md §7.4, §6.6; `results/scratch/measure_virat_one_after_lever_E/`,
+   `results/scratch/measure_virat_one_fullspectrum/`]*
 
 9. **The baseline retains its value under the new framing.** The collapse
    finding, the parameter-ratio mechanism and the hybrid negative result are all

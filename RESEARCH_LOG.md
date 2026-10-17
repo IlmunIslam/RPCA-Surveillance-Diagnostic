@@ -622,6 +622,10 @@ is ordinary numerical sensitivity of a 100-iteration non-smooth iteration
 - The batch runs on the half-spectrum path; nothing here changes its numbers'
   validity. The a796ae6 outputs stay as the gate record; the re-run outputs stay
   in scratch.
+- **The VIRAT finding was then tested against this sensitivity directly** (§7.8):
+  `video_01` re-solved on the full spectrum moves `E` by 3.1e-2 relative, yet the
+  statistics the finding rests on move by at most 0.37%. The population-level claim
+  is robust to the FFT path; per-voxel membership at a hard threshold is not.
 
 ---
 
@@ -785,6 +789,48 @@ encoding, against the 108 h projected from run 1. float32 remains unnecessary;
 HOOI warm-starting remains off (it would change the numbers). The memory work is
 closed; the next step is the Phase 3 batch runner.
 
+### 7.8 FFT-path robustness of the VIRAT finding, 2026-10-17
+
+Every VIRAT run so far used the half-spectrum S-update, and §6.6 showed the ADMM
+amplifies the rounding that path introduces. So before the batch, `video_01` was
+re-solved with the S-update forced onto the retained full-spectrum path
+(`python -m src.measure_virat_one --full-spectrum`, same `lam = 0.4`,
+`factor = 1.0`, 100 iterations; `results/scratch/measure_virat_one_fullspectrum/`,
+log `logs/measure_virat_one_fullspectrum.log`; 33.1 min, 19.9 s/iter, peak
+2,926 MB -- the full-spectrum path is ~60% slower and ~260 MB heavier, which is why
+the half path is the one the batch uses).
+
+The components differ as §6.6 predicts: relative Frobenius difference 1.9e-3 for
+`L`, 3.1e-3 for `S`, **3.1e-2 for `E`** (max absolute 1.8e-2). The statistics the
+finding rests on do not:
+
+| statistic | half spectrum (run 3) | full spectrum | rel. diff |
+|---|---|---|---|
+| S-claimed voxels (abs S > 0.05) | 2,934,597 (16.983%) | 2,934,725 (16.983%) | 0.004% |
+| E-claimed voxels (abs E > 0.05) | 906,813 (5.248%) | 907,012 (5.249%) | 0.022% |
+| S-claimed at 0.01 | 15,253,829 | 15,253,371 | 0.003% |
+| E-claimed at 0.01 | 4,176,242 | 4,178,605 | 0.057% |
+| **S and E both claimed, share of S-claimed, at 0.05** | **12.672%** | **12.673%** | **0.014%** |
+| `E` nonzero | 78.924% | 78.632% | 0.369% |
+| l1 mass `L` / `S` / `E` | 7.737e6 / 5.793e5 / 1.990e5 | 7.737e6 / 5.793e5 / 1.991e5 | <=0.036% |
+
+Individual voxels do cross the cut -- at 0.05, 22,993 voxels flip in `E` (2.5% of
+those the half run claimed) and 6,086 in `S` (0.21%) -- but the flips cancel, so the
+aggregates are stable to a fraction of a percent. **Conclusion: the finding is
+robust to the numerics at the population level; no claim may rest on which
+individual voxels are in a component's support.**
+
+**Two corrections to §7.4 that came out of recomputing from the stored components.**
+(a) §7.4's "45%" overlap was read off **one frame** (the figure's frame 151). Over
+the whole tensor the overlap is **12.67%**, and per frame it ranges **2.2% to
+54.3%** (mean 22.8%, median 24.7%) -- the figure's frame is near the maximum. Phase 3
+records the whole-tensor statistic per run (`SE_overlap_005`) plus per-frame l1 in
+`supports.npz`, and the manuscript should quote the whole-tensor number and the
+spread, not a single frame. (b) §7.4's "only 4.0% of pixels exceed 0.05" for that
+frame does not reproduce from the stored components, which give 2.53%; the stored
+arrays are authoritative. Both runs agree with each other on both numbers, so this
+is a bookkeeping error in the original §7.4 text, not a numerical effect.
+
 ## 8. Phase 3 batch design — decided 2026-09-19
 
 **Decision (author's):** two conditions.
@@ -832,6 +878,77 @@ columns; resume keyed on that file (never on `all_results.csv`); per-video
 timeout budgeted with the H.264 step; watchdog adapted from
 `watchdog_param_sweep.ps1`; smoke test on one video before the batch; detached
 launch per `PHASE3_NOTES.md` §1. Design to be shown before the first run.
+
+---
+
+## 9. Phase 3 runner built and smoke-tested, 2026-10-18
+
+`src/phase3_worker.py` (one run per process), `src/phase3_runner.py` (the only writer
+of `results/metrics/ssrtd_real_results.csv`), `watchdog_phase3.ps1`. Design and the
+measured artifact sizes: `IMPLEMENTATION_PLAN.md` (h). Nothing of the batch has run.
+
+### 9.1 What the smoke test verified
+
+Two runs on `video_01` into `results/scratch/phase3_smoke/` (never the Phase 3 CSV),
+run twice -- once on the first build, once after the fixes below, because a gate that
+passed only on a superseded version is not a gate.
+
+- **Bitwise gate PASSED.** The clean run's `L`, `S`, `E` and all 17 shared history
+  columns are byte-identical to run 3 (§7.7), so the worker's loader, solver call and
+  settings are exactly the configuration that was measured.
+- **The fixes changed no numbers.** Every value in the second run's summary matches
+  the first's, and all 19 shared history columns are identical; only two key *names*
+  changed (the `0.01` occupancies, below).
+- **Noise path PASSED its gate:** `psnr_LS_vs_clean` 31.71 dB against
+  `psnr_noisy_vs_clean` 18.68 dB, every noise metric finite.
+- **CSV complete:** 76 columns in the fixed order, no column empty in both rows, and
+  the 14 noise-only columns empty on the clean row exactly as intended.
+- Cost per run: **26.0 min** clean (25.5 ADMM + 8 s H.264), **25.6 min** noise, peaks
+  2,675 / 2,823 MB. The same runs took 23.4 / 21.0 min on an idle machine, so budget
+  **22-26 min per run depending on load**: 220 runs is **80-95 h**, and the 3,600 s
+  timeout keeps a 2.3x margin at the slow end.
+
+### 9.2 Three defects the smoke test found (all fixed before any batch run)
+
+1. **Silently empty columns.** `str(0.05).replace("0.", "")` gives `"05"`, so the
+   worker emitted `S_gt05_pct`/`E_gt05_pct` while the CSV expected
+   `S_gt005_pct`/`E_gt005_pct` -- **the 0.05 occupancies, which are the finding's own
+   numbers, would have been blank in all 220 rows.** Caught by the runner's
+   "fields not in COLUMNS" report, which is retained for exactly this reason. Fixed
+   with an explicit `{0.01: "001", 0.05: "005"}` map; a test now asserts that every
+   key the statistic functions emit exists in `COLUMNS`.
+2. **No visibility into a running worker.** `subprocess.run(capture_output=True)`
+   buffers until exit, so during an 80-hour batch the per-iteration log of the run in
+   progress was unreadable. Worker output now streams to `<run>/worker.log`
+   (tailable live) and a failure records its tail in `logs/phase3_errors.log`.
+   Verified on a deliberately bad `--video-id`: nonzero exit, no `summary.json`,
+   real error text captured.
+3. **No disk guard.** The runner now stops cleanly below 2 GB free rather than
+   crashing part way through, and logs how many runs remain.
+
+### 9.3 First noise-condition numbers (one video -- not a result)
+
+`video_01`, 10% impulse, seed 0, `lam = 0.4`, `factor = 1.0`:
+
+| | value |
+|---|---|
+| PSNR noisy vs clean | 18.68 dB |
+| **PSNR `L+S` vs clean** | **31.71 dB (+13.02 dB)**, SSIM 0.947 |
+| PSNR `L` vs clean | 26.26 dB |
+| `E` recall / precision (nonzero) | 0.998 / 0.120 |
+| `E` recall / precision at 0.05 | **0.895 / 0.628** |
+| corruptions that changed a value | 99.62% (0.38% redraw the same integer, about 1/256) |
+| `E` nonzero / `E` > 0.05 | 82.8% / 14.3% |
+| S and E overlap at 0.05 | **20.99%** (clean: 12.67%) |
+
+Read with care, and only as a first look: **given noise to find, `E` finds it** --
+90% of the impulses at the 0.05 cut, 63% precision, and the reconstruction gains
+13 dB. But `E` is still far over-inclusive (82.8% of voxels nonzero against 10%
+corrupted) and the S/E overlap *rises* to 21%. So the model-misfit observation of
+§7.4 is not an artifact of giving `E` nothing to do -- it persists when `E` has its
+designated job. That is why the noise arm was worth its 7 hours. Also notable for
+the compression story: impulse noise takes `X` at CRF 23 from 230 KB to 4,241 KB and
+`E` at CRF 28 to 1,450 KB.
 
 ---
 

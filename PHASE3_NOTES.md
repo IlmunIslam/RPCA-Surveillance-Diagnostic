@@ -116,6 +116,34 @@ For Phase 3:
   programs during the run regardless; if iterations start exceeding ~25 s in the
   log, the machine is paging again — check commit charge before anything else.
 
+## Running the Phase 3 batch (written 2026-10-18, after the smoke test)
+
+```
+python -m src.phase3_runner --dry-run        # the plan, resume state, disk, environment
+python -u -m src.phase3_runner --smoke       # two runs on video_01 into results/scratch/
+python -u -m src.phase3_runner               # all 220 runs, arms in order
+python -u -m src.phase3_runner --arms clean-subset
+```
+
+- **Launch detached** (section 1 above), then `watchdog_phase3.ps1`, also detached.
+  Both are `ask`-gated in `.claude/settings.json`, so each needs explicit approval.
+- **Watch a run in progress** with `tail -f results/ssrtd_real/runs/<run>/worker.log`.
+  The runner's own log is `logs/phase3_runner.log`; failures land in
+  `logs/phase3_errors.log` with the worker log tail attached.
+- **Never two writers.** `results/ssrtd_real/runner.lock` holds the live pid; a second
+  runner refuses to start. The watchdog also waits while a worker is still solving,
+  so a killed runner cannot be replaced alongside its own child.
+- **Resume is free.** Completed runs are skipped on the CSV key
+  `(video_id, condition, factor, lam, seed)`; a run whose `summary.json` exists but
+  whose row is missing is adopted, not recomputed.
+- **It stops rather than crashing** below 2 GB free disk, and says how many runs are
+  left. Budget ~2.2 MB per run plus 160-174 MB for each of the three figure videos.
+- **Timing: 22-26 min per run**, depending on what else is using the CPU (the same
+  smoke runs took 23.4 and 26.0 min). 220 runs is 80-95 h. Per-run timeout 3,600 s.
+- **The manifest** `results/metrics/ssrtd_real_manifest.json` records the numerical
+  environment of every runner start and appends rather than overwrites, so a numpy
+  or OS change mid-batch stays visible (`RESEARCH_LOG.md` §6.6 for why).
+
 ## Not carried over
 
 The other recovered notes were stale, and are deliberately **not** copied:

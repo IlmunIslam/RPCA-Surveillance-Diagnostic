@@ -33,7 +33,9 @@ import pandas as pd
 import psutil
 
 from src.preprocessing import frames_to_tensor, load_registry, load_video_frames
-from src.ssrtd_real import E_THRESHOLD_FACTOR, feasible_ranks, ssrtd_real, tucker_ranks
+from src import ssrtd_real as _sr
+from src.ssrtd_real import (E_THRESHOLD_FACTOR, compute_phi, feasible_ranks,
+                            ssrtd_real, tucker_ranks)
 
 PROJECT_DIR = Path(__file__).parent.parent
 OUT_DIR = PROJECT_DIR / "results" / "scratch" / "measure_virat_one"
@@ -94,6 +96,11 @@ def main():
     ap.add_argument("--max-iter", type=int, default=100)
     ap.add_argument("--tol", type=float, default=1e-6)
     ap.add_argument("--out", default=str(OUT_DIR))
+    ap.add_argument("--full-spectrum", action="store_true",
+                    help="solve eq. (9) on the FULL spectrum (fftn/ifftn) instead of the "
+                         "default half spectrum (rfftn/irfftn). Mathematically identical, "
+                         "different rounding -- used to test whether a finding is robust "
+                         "to the FFT path (RESEARCH_LOG.md 6.6)")
     args = ap.parse_args()
 
     out = Path(args.out)
@@ -121,8 +128,19 @@ def main():
           f"  load {t_load:.1f} s")
     print(f"  ranks   {ranks} -> attainable {feasible_ranks(X.shape, ranks)}")
     print(f"  lam {args.lam}  factor {args.factor}  max_iter {args.max_iter}  tol {args.tol:g}")
+    print(f"  S-update: {'FULL spectrum (fftn/ifftn)' if args.full_spectrum else 'half spectrum (rfftn/irfftn)'}")
     print(f"  after load: working set {mb(proc.memory_info().wset):.0f} MB")
     print("-" * 72, flush=True)
+
+    if args.full_spectrum:
+        # ssrtd_real precomputes the HALF Phi internally, so the full-spectrum route
+        # is forced the same way src/probe_gate_fullspectrum.py forces it: wrap
+        # update_S so it ignores that phi and uses the full one. The retained
+        # full-spectrum path in update_S is unchanged code (test_s_update test 3).
+        _phi_full = compute_phi(X.shape)
+        _orig_update_S = _sr.update_S
+        _sr.update_S = lambda *a, **k: _orig_update_S(
+            *a, **{**k, "phi": _phi_full, "half_spectrum": False})
 
     t0 = time.perf_counter()
     r = ssrtd_real(X, lam=args.lam, max_iter=args.max_iter, tol=args.tol,
@@ -149,6 +167,7 @@ def main():
         "video_id": row["short_id"], "file": row["original_filename"],
         "shape": list(X.shape), "lam": args.lam, "factor": args.factor,
         "max_iter": args.max_iter, "tol": args.tol,
+        "s_update_path": "full" if args.full_spectrum else "half",
         "ranks_requested": list(ranks), "ranks_attainable": list(feasible_ranks(X.shape, ranks)),
         "n_iter": r["n_iter"], "converged": r["converged"],
         "wall_seconds": wall, "seconds_per_iteration": wall / max(r["n_iter"], 1),
