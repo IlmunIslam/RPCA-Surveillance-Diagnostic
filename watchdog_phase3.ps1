@@ -89,7 +89,7 @@ while ($true) {
 
         Log "runner not running ($rows/$target rows) - relaunching detached (stall=$stall)"
         Start-Process -FilePath "cmd.exe" `
-            -ArgumentList '/c','python -u -m src.phase3_runner >> logs\phase3_runner.log 2>&1' `
+            -ArgumentList '/c','python -u -m src.phase3_runner >> logs\phase3_runner.stdout.log 2>&1' `
             -WorkingDirectory $proj -WindowStyle Hidden
         Start-Sleep -Seconds 10
         $p2 = Get-RunnerProc

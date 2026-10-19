@@ -365,6 +365,43 @@
    population-level claim is numerically robust; per-voxel membership at a hard
    threshold is not, so no claim should rest on individual voxels.
 
+   **QUOTE THE ENRICHMENT RATIO, NOT THE RAW OVERLAP** (author's instruction,
+   2026-10-19). "12.67% of S-claimed voxels are also E-claimed" is uninterpretable
+   alone — a reviewer's first question is "compared to what?". The interpretable
+   statistic is the enrichment over independence:
+
+   > enrichment = P(E-claimed | S-claimed) / P(E-claimed)
+
+   which is 1.0 if the two supports are independent. On `video_01` clean:
+   12.672% / 5.248% = **2.42x**. That is the number that makes this a finding.
+
+   **The noise condition decomposes it, and confirms the mechanism** (same video,
+   10% random-valued impulse, seed 0, corrupted fraction exactly 10.000%; computed
+   from the run's own saved `supports.npz` and `noise_mask.npz`):
+
+   | voxel population | S>0.05 | E>0.05 | P(E\|S) | enrichment |
+   |---|---|---|---|---|
+   | clean input, all voxels | 16.98% | 5.25% | 12.67% | **2.42x** |
+   | impulse10, all voxels | 15.89% | 14.25% | 20.99% | 1.47x |
+   | impulse10, **uncorrupted** voxels | 15.92% | 5.89% | 13.59% | **2.31x** |
+   | impulse10, corrupted voxels | 15.63% | 89.50% | 88.84% | **0.99x** |
+
+   Read it this way, and report it this way: `E`'s noise-detection work is
+   **independent of `S`** (0.99x — impulses are scattered uniformly, so S-membership
+   predicts nothing), while `E`'s edge-locked excess is **enriched ~2.3-2.4x
+   whether or not noise is present**. The enrichment on uncorrupted voxels (2.31x)
+   is within 5% of the clean-input value (2.42x) — the same phenomenon, measured
+   twice under different conditions.
+
+   ⚠️ **Do not quote the raw 21% overlap under noise as stronger evidence.** It is
+   larger only because `E` legitimately claims 14.25% of voxels instead of 5.25%;
+   normalised, the enrichment *falls* to 1.47x because the two populations are mixed.
+   The enrichment must be computed on uncorrupted voxels for the noise condition,
+   or it understates the effect it is meant to measure. Phase 3 stores the mask per
+   run precisely so this split is reproducible; enrichment itself is derived from
+   two existing CSV columns (`SE_overlap_005 / E_gt005_pct`), so it is computed at
+   analysis time and no column was added mid-batch.
+
    If the aggregate holds across videos and across `lambda` in [0.2, 1], this is the
    smooth-vs-sharp finding the pivot exists to test. Until then the caveats are
    the result: single video; single `lambda`; clean input so `E` has no designated

@@ -110,7 +110,8 @@ For Phase 3:
   memory-starved run looks like in the log.) Budget the H.264 step before setting
   the timeout.
 - **Memory is the other constraint — measured, not projected.** This machine has
-  **7.8 GB** of RAM. The full-loop peak is **2,663 MB** per video after the `rfftn`
+  **7.8 GB** of RAM (⚠️ wrong — measured 15.8 GB at the
+  2026-10-19 launch; see the correction at the end of this section). The full-loop peak is **2,663 MB** per video after the `rfftn`
   change and levers A–E (`RESEARCH_LOG.md` §7.5–§7.7), down from 3,512 MB, at which
   the machine paged (commit charge 93%). Headroom is now roughly 2 GB. Close other
   programs during the run regardless; if iterations start exceeding ~25 s in the
@@ -143,6 +144,34 @@ python -u -m src.phase3_runner --arms clean-subset
 - **The manifest** `results/metrics/ssrtd_real_manifest.json` records the numerical
   environment of every runner start and appends rather than overwrites, so a numpy
   or OS change mid-batch stays visible (`RESEARCH_LOG.md` §6.6 for why).
+
+### Two things the real launch taught (2026-10-19)
+
+- **Never redirect the detached launch into the runner's own log file.** The
+  documented command in section 1 reads `>> logs\<runner>.log`; pointed at
+  `logs\phase3_runner.log`, which `phase3_runner.py` also appends to itself, the
+  runner dies **in under a second** with
+  `PermissionError: [Errno 13] ... logs\phase3_runner.log`. Windows `cmd` opens a
+  `>>` redirection target with exclusive sharing, so Python cannot also open it.
+  The smoke test could not catch this: it was not launched through a redirection.
+  Launch with a **separate** stdout file:
+
+  ```
+  python -u -m src.phase3_runner >> logs\phase3_runner.stdout.log 2>&1
+  ```
+
+  `watchdog_phase3.ps1` carried the same colliding redirection in its relaunch
+  command, which would have been an **overnight silent failure**: relaunch, die in
+  a second, no new rows, give up after four tries. Fixed; if the watchdog is ever
+  re-derived from `watchdog_param_sweep.ps1`, check this line first.
+- **This machine has 15.8 GB of RAM, not 7.8 GB** as section 3 above said (measured
+  `Win32_OperatingSystem.TotalVisibleMemorySize` at launch, with 6.7 GB free and
+  commit charge 80% while a dozen MCP server processes were running). The 2,663 MB
+  per-run peak therefore has far more headroom than the notes assumed. The paging
+  symptom to watch for is unchanged — iterations above ~25 s in the worker log.
+- **A crashed start still leaves a manifest entry.** The 09:48:58 entry records the
+  failed launch above; the 09:49:41 entry is the batch. That is the intended
+  behaviour (the manifest records starts, and appends), not a duplicate to clean up.
 
 ## Not carried over
 

@@ -696,6 +696,13 @@ Convergence was healthy: `err_X` 177 → 0.58, constraint residual 0.027% of ‖
   those also have `|E| > 0.05`** — the two components share the sharp edges rather
   than separating.
 
+> **Read the two percentages above with §9.4 and the §7.4 corrections below.** The
+> per-frame numbers here are superseded by whole-tensor values recomputed from the
+> stored components, and the interpretable statistic is the **enrichment ratio**
+> (2.42x on clean input), not the raw overlap share. The noise condition
+> **corroborates** this observation at 2.31x on uncorrupted voxels; it is not what
+> the observation depends on.
+
 If this holds across videos and across `lambda` in [0.2, 1], it is the
 smooth-vs-sharp finding the pivot exists to test: the TV-smooth `S` does not
 cleanly capture sharp surveillance foreground, and the edges leak into both `S`
@@ -944,11 +951,54 @@ passed only on a superseded version is not a gate.
 Read with care, and only as a first look: **given noise to find, `E` finds it** --
 90% of the impulses at the 0.05 cut, 63% precision, and the reconstruction gains
 13 dB. But `E` is still far over-inclusive (82.8% of voxels nonzero against 10%
-corrupted) and the S/E overlap *rises* to 21%. So the model-misfit observation of
-§7.4 is not an artifact of giving `E` nothing to do -- it persists when `E` has its
-designated job. That is why the noise arm was worth its 7 hours. Also notable for
-the compression story: impulse noise takes `X` at CRF 23 from 230 KB to 4,241 KB and
-`E` at CRF 28 to 1,450 KB.
+corrupted), and the raw S/E overlap *rises* to 21%. So the model-misfit observation
+of §7.4 is not an artifact of giving `E` nothing to do -- it persists when `E` has
+its designated job. That is why the noise arm was worth its 7 hours. Also notable
+for the compression story: impulse noise takes `X` at CRF 23 from 230 KB to
+4,241 KB and `E` at CRF 28 to 1,450 KB.
+
+### 9.4 The enrichment ratio, and how the two conditions actually relate
+
+Added 2026-10-19 on the author's instruction that the raw overlap percentage is
+uninterpretable alone. Define
+
+    enrichment = P(E-claimed | S-claimed) / P(E-claimed),
+
+which is 1.0 under independence of the two supports. Computed from each run's own
+`supports.npz` (and `noise_mask.npz` for the split), `video_01`:
+
+| voxel population | S>0.05 | E>0.05 | P(E\|S) | enrichment |
+|---|---|---|---|---|
+| clean input, all voxels | 16.98% | 5.25% | 12.67% | **2.42x** |
+| impulse10, all voxels | 15.89% | 14.25% | 20.99% | 1.47x |
+| impulse10, **uncorrupted** voxels | 15.92% | 5.89% | 13.59% | **2.31x** |
+| impulse10, corrupted voxels | 15.63% | 89.50% | 88.84% | **0.99x** |
+
+The corrupted fraction is exactly 10.000% of voxels, which also re-confirms the
+noise model at VIRAT scale.
+
+**This corrects the framing, and it matters for how §7.4 is written.** The
+instinctive reading -- overlap rises from 12.67% to 20.99%, so the noise condition
+is the *stronger* evidence -- does not survive normalisation. Under noise `E`
+legitimately claims 14.25% of voxels instead of 5.25%, so the enrichment **falls**
+to 1.47x. Splitting on the mask shows why: on corrupted voxels the enrichment is
+**0.99x**, i.e. `E`'s noise-detection work is statistically independent of `S`,
+exactly as it should be for impulses scattered uniformly at random; on uncorrupted
+voxels the enrichment is **2.31x**, within 5% of the clean-input 2.42x. The 21%
+figure is a mixture of two populations and should not be quoted as an effect size.
+
+So the correct relationship between the conditions is **corroboration, not
+dependence**: the clean-input observation stands on its own (2.42x), and the noise
+condition reproduces the same edge-locked enrichment (2.31x) while `E` is
+simultaneously doing its designated job -- plus it adds an independent misfit
+statistic (`E` nonzero on 82.8% of voxels against 10% corrupted, and the
+uncorrupted-voxel E-claimed rate rising 5.25% -> 5.89%, so noise makes `E` claim
+*more* uncorrupted structure, not less). §7.4 is to be written with the clean
+condition as the primary observation and the noise condition as corroboration.
+
+Enrichment is a derived quantity -- `SE_overlap_005 / E_gt005_pct`, both already
+in the Phase 3 column list -- so it is computed at analysis time. No column was
+added to the schema while the batch was running (see §10).
 
 ---
 
