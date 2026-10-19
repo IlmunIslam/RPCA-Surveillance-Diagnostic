@@ -195,10 +195,22 @@ Edit(/results/metrics/all_results.csv)
 Edit(/results/metrics/param_sweep.csv)
 ```
 
-What they cover: Claude Code's own file tools (Edit, Write, NotebookEdit), the file
-commands it recognizes in a shell command (`cat`, `sed`, `tee`, …) and the target of
-a shell redirection (`> file`, `>> file`) naming those paths. What they do **not**
-cover: a Python script that opens one of those paths itself, `pandas.to_csv`, or any
+> ⚠️ **TESTED 2026-10-19: BOTH RULES WERE INERT, AND THE TEST DAMAGED THE FILE.**
+> `echo ... >> results/metrics/all_results.csv` **succeeded** (one line appended;
+> restored byte-for-byte from `results/baseline_naive/`, SHA256 re-verified against
+> §5), and an `Edit` probe on the same path reached string-matching instead of being
+> refused — so neither rule fired. Cause: the session was keyed to the **parent**
+> folder, not the repo, so the committed `.claude/settings.json` was never read; the
+> parent's `.claude/settings.local.json` (`Bash(python *)`, 60+ rules) is what was
+> granting instead. The rules are therefore **unverified, not known-working**, and the
+> coverage claim below is what the documentation implies, **not** what has been
+> observed on this machine. Re-run the test from a repo-root session before relying on
+> any of it. What held in this incident was the §5 hash plus the backup — nothing else.
+
+What they are *documented* to cover: Claude Code's own file tools (Edit, Write,
+NotebookEdit), the file commands it recognizes in a shell command (`cat`, `sed`,
+`tee`, …) and the target of a shell redirection (`> file`, `>> file`) naming those
+paths. What they do **not** cover: a Python script that opens one of those paths itself, `pandas.to_csv`, or any
 other process writing the file indirectly. So this is a **guardrail against
 accidental edits during a session, not a boundary**. The immutability evidence
 remains the SHA256 hashes in §5, and the rule that no pipeline writes to these

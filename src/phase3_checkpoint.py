@@ -165,23 +165,28 @@ def report(rows, arm, csv_path=RESULTS_CSV):
 
     print()
     hdr = (f"{'video_id':12s} {'S>.05%':>7s} {'E>.05%':>7s} {'P(E|S)%':>8s} "
-           f"{'enrich':>7s} {'E!=0%':>6s} {'fg%':>6s} {'iters':>5s} {'conv':>5s} "
-           f"{'min':>6s} {'peakMB':>7s}")
+           f"{'enrich':>8s} {'S_px':>9s} {'both':>8s} {'exp.ind':>8s} "
+           f"{'fg%':>6s} {'min':>5s}")
     print(hdr)
     print("-" * len(hdr))
 
     enr, ovl, fg, sclaim = [], [], [], []
+    tot_both, tot_exp = 0.0, 0.0
     for r in rows:
         s5, e5, ov = f(r, "S_gt005_pct"), f(r, "E_gt005_pct"), f(r, "SE_overlap_005")
         ratio = (ov / e5) if (ov is not None and e5) else None
+        spx, both = f(r, "S_claimed_px"), f(r, "SE_both_px")
+        # voxels that would overlap if the two supports were independent
+        exp_ind = (spx * e5 / 100.0) if (spx is not None and e5 is not None) else None
+        if both is not None and exp_ind:
+            tot_both += both
+            tot_exp += exp_ind
         print(f"{r.get('video_id',''):12s} "
               f"{_fmt(s5,3):>7s} {_fmt(e5,3):>7s} {_fmt(ov,3):>8s} "
-              f"{(_fmt(ratio,3)+'x') if ratio else '     --':>7s} "
-              f"{_fmt(f(r,'E_nonzero_pct'),1):>6s} "
-              f"{_fmt(f(r,'foreground_density'),2):>6s} "
-              f"{r.get('n_iter',''):>5s} {r.get('converged',''):>5s} "
-              f"{_fmt((f(r,'total_seconds') or 0)/60.0,1):>6s} "
-              f"{_fmt(f(r,'peak_wset_mb'),0):>7s}")
+              f"{(_fmt(ratio,1)+'x') if ratio else '      --':>8s} "
+              f"{_fmt(spx,0):>9s} {_fmt(both,0):>8s} {_fmt(exp_ind,1):>8s} "
+              f"{_fmt(f(r,'foreground_density'),3):>6s} "
+              f"{_fmt((f(r,'total_seconds') or 0)/60.0,1):>5s}")
         if ratio is not None:
             enr.append(ratio)
             ovl.append(ov)
@@ -197,6 +202,13 @@ def report(rows, arm, csv_path=RESULTS_CSV):
         if xs:
             print(f"{name:24s} min {min(xs):7.3f}  median {median(xs):7.3f}  "
                   f"max {max(xs):7.3f}  mean {mean(xs):7.3f}  sd {sd(xs):6.3f}")
+    if tot_exp:
+        print(f"{'POOLED over the arm':24s} {tot_both:,.0f} overlapping voxels against "
+              f"{tot_exp:,.1f} expected under independence = "
+              f"**{tot_both/tot_exp:.1f}x**")
+        print("  (pooled is the figure to quote across videos: the per-video "
+              "ratio is high-variance when a scene is near-empty and its")
+        print("   supports are only thousands of voxels.)")
     if enr:
         above = sum(1 for x in enr if x > 1.0)
         print(f"{'enrichment > 1.0':24s} {above}/{len(enr)} videos"
