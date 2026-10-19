@@ -402,10 +402,33 @@
    two existing CSV columns (`SE_overlap_005 / E_gt005_pct`), so it is computed at
    analysis time and no column was added mid-batch.
 
-   If the aggregate holds across videos and across `lambda` in [0.2, 1], this is the
-   smooth-vs-sharp finding the pivot exists to test. Until then the caveats are
-   the result: single video; single `lambda`; clean input so `E` has no designated
-   job (settled by the noise condition, `RESEARCH_LOG.md` §8); no ground truth.
+   **IT REPLICATES ACROSS 20 VIDEOS — and `video_01` is the weakest case**
+   (clean-subset checkpoint, `RESEARCH_LOG.md` §10). Enrichment exceeds 1 on
+   **20 of 20** videos, **median 40.4x**, range **2.4x–199.8x**; the 2x2 odds ratio
+   agrees (median 94x). **`video_01`'s 2.4x is the lowest of the twenty**, because its
+   scene is far busier than typical (`foreground_density` 4.263% against a subset
+   median of 0.403%). So every percentage quoted above is **one busy video's**, and it
+   **understates** the effect: label them as such, give the subset median and range
+   beside them, and describe the illustrating frame as a conservative case, not a
+   representative one. Do **not** quote the pooled ratio (4.9x) — `video_01` alone
+   carries 90% of its expected count.
+
+   **Second result, same arm: the effect is stronger the emptier the scene.**
+   Enrichment versus `foreground_density` gives Spearman **rho = −0.731** (n = 20,
+   p ~ 0.0003), a log-log slope of **−0.54** (about −71% per 10x busier scene), and it
+   survives the support-size confound — controlling for `S_claimed_px` the partial is
+   **−0.529**, while controlling for density the support-size term *reverses* sign to
+   +0.357. That is the opposite of "busy scenes confuse the decomposition", and it fits
+   the mechanism: with little real foreground, nearly all of `S`'s above-threshold mass
+   *is* background edge structure, which is what `E` takes too. Untested hypothesis;
+   the direct test is enrichment inside versus outside the annotation boxes.
+
+   If the aggregate holds across `lambda` in [0.2, 1] as it does across videos, this is
+   the smooth-vs-sharp finding the pivot exists to test. Until then the caveats are
+   the result: single `lambda`; clean input so `E` has no designated job (corroborated
+   by the noise condition — see the enrichment decomposition above and
+   `RESEARCH_LOG.md` §8); no ground truth; and voxels are spatially autocorrelated, so
+   the videos are the sample, not the voxels.
    *[RESEARCH_LOG.md §7.4, §6.6; `results/scratch/measure_virat_one_after_lever_E/`,
    `results/scratch/measure_virat_one_fullspectrum/`]*
 

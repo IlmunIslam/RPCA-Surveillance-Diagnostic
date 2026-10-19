@@ -206,9 +206,10 @@ def report(rows, arm, csv_path=RESULTS_CSV):
         print(f"{'POOLED over the arm':24s} {tot_both:,.0f} overlapping voxels against "
               f"{tot_exp:,.1f} expected under independence = "
               f"**{tot_both/tot_exp:.1f}x**")
-        print("  (pooled is the figure to quote across videos: the per-video "
-              "ratio is high-variance when a scene is near-empty and its")
-        print("   supports are only thousands of voxels.)")
+        print("  (pooled is dominated by the busiest video in the arm -- on the "
+              "20-video subset video_01 alone carries 90% of the expected")
+        print("   count, so quote the MEDIAN per-video ratio and its range, with "
+              "pooled only as a secondary figure.)")
     if enr:
         above = sum(1 for x in enr if x > 1.0)
         print(f"{'enrichment > 1.0':24s} {above}/{len(enr)} videos"

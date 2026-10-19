@@ -1002,6 +1002,88 @@ added to the schema while the batch was running (see §10).
 
 ---
 
+## 10. Phase 3 clean-subset checkpoint — 20/20 runs, 2026-10-19
+
+The batch was launched detached at 09:49 and the 20-video clean arm finished at 18:19.
+Author's instruction was to stop and report on these 20 before the remaining ~70 h went
+in on top of them (and not to roll into the noise arm silently).
+
+**Health.** 20 of 20 completed; **zero failures, zero timeouts, zero watchdog
+relaunches**, `logs/phase3_errors.log` empty. 24.4-28.5 min per run (median 25.2; the
+three figure videos are the slow end because of their extra artifacts), peak working set
+2,676 MB, every row at commit `34acf33`, numpy 2.4.6, half-spectrum S-update. All 20 ran
+the full 100 iterations without meeting `tol`, as expected (PAPER_NOTES item 14).
+
+**Reproducibility, for free.** Batch `video_01` is **identical on all 14 checked
+statistics** to the smoke run nine hours earlier (support counts, l1 masses,
+`err_X_final`, PSNR/SSIM, H.264 sizes) across two different commits of the surrounding
+code. Within one machine and one FFT path the pipeline is deterministic; cross-build
+reproducibility is still only to reported precision (§6.6).
+
+### 10.1 The finding replicates
+
+| | |
+|---|---|
+| enrichment > 1 | **20 / 20 videos** |
+| median enrichment | **40.4x** |
+| range | **2.4x - 199.8x** |
+| raw overlap P(E\|S) | 8.95% - 49.41% (median 31.3%) |
+| 2x2 odds ratio | median **94x**, range 3.7 - 364x |
+
+The odds ratio is a different functional form (it conditions on both marginals) and
+agrees, so the effect is not an artifact of how the ratio was defined.
+
+⚠️ **Do not quote the pooled figure.** Pooled over the arm it is 4.9x, but `video_01`
+alone carries **90% of the expected count** and 44% of the overlapping voxels, so pooled
+is effectively one video (26.8x without it). **Quote the median per-video ratio with its
+range**; pooled is secondary at best. `src/phase3_checkpoint.py` prints this warning.
+
+### 10.2 video_01 is the WEAKEST case in the subset
+
+`video_01` -- the video every figure and every earlier number came from -- has the
+**lowest enrichment of all 20 at 2.4x**, against a median of 40.4x. Its scene is far
+busier than typical: `foreground_density` 4.263% against a subset median of 0.403%, and
+its `|S| > 0.05` share is 16.98% against a subset range of 0.023%-3.400%.
+
+Consequence for the manuscript: **the finding is substantially stronger on typical VIRAT
+video than on the frame used to illustrate it.** Item 18's percentages must be labelled
+as one video's, with the subset median and range beside them, and the illustrating frame
+described as a conservative case rather than a representative one.
+
+### 10.3 Enrichment falls as the scene gets busier
+
+| test | value |
+|---|---|
+| enrichment vs `foreground_density` | Spearman **rho -0.731** (n=20, p~0.0003) |
+| log-log slope | **-0.54**, i.e. about **-71% per 10x busier scene** |
+| partial, controlling for `S_claimed_px` | rho **-0.529** |
+| partial, controlling for density | support size **+0.357** (sign reverses) |
+| odds ratio vs density | rho -0.504 (p~0.024) |
+
+The obvious confound -- that this is only support size, since density and
+`S_claimed_px` are tightly coupled (rho +0.818) -- was tested and **pulls the opposite
+way**: it suppresses the relationship rather than creating it.
+
+**Hypothesis for the mechanism** (not yet tested): in a near-empty scene almost all of
+`S`'s above-threshold mass *is* background edge structure, which is exactly what `E`
+claims as well, so the two supports nearly coincide; real foreground gives `S` content
+`E` has no reason to touch, diluting the overlap. A direct test would compare enrichment
+inside and outside annotated foreground boxes (`data/annotations/`).
+
+**`video_173` breaks the trend** (density 0.174%, enrichment 175x) because its `E`
+support is unusually small -- 19,060 voxels where comparable scenes run 130k-254k. Look
+at its frames before this goes near the manuscript.
+
+### 10.4 Caveats that travel with §10
+
+20 videos, one `lambda`, clean input only. Voxels are spatially autocorrelated, so every
+p-value here is indicative rather than inferential -- the videos, not the voxels, are the
+sample. `foreground_density` comes from raw-frame differencing, not from the annotations.
+The noise arm (running next) and the factor=2.0 arm are what test the first two caveats;
+the `lambda` sweep remains deferred pending this checkpoint, and §10.3 is an argument for
+running it, since the density dependence may interact with `lambda`.
+
+
 ## Verification provenance
 
 Facts above were checked with, and are reproducible via:
