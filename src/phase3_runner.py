@@ -52,6 +52,7 @@ ERROR_LOG = PROJECT_DIR / "logs" / "phase3_errors.log"
 SMOKE_DIR = PROJECT_DIR / "results" / "scratch" / "phase3_smoke"
 
 LAM = 0.4                 # RESEARCH_LOG.md section 8: one lambda for every arm
+SWEEP_LAMS = (0.2, 0.6, 0.8, 1.0)   # section 11: with LAM this is {.2,.4,.6,.8,1}
 TIMEOUT_S = 3600          # ~2.5x the measured 22 min ADMM + 2 min H.264
 # Runs that also keep the full float32 L/S/E (160 MB per run compressed). Chosen as
 # the sweep subset's density extremes plus its busiest scene, which is what the
@@ -218,18 +219,22 @@ def build_plan(arms=None, smoke=False):
     sub = subset_ids()
     rest = [v for v in all_ids() if v not in set(sub)]
     spec = [
-        ("clean-subset", sub, "clean", 1.0, 0),
-        ("noise-subset", sub, "impulse10", 1.0, 0),
-        ("factor2-subset", sub, "clean", 2.0, 0),
-        ("clean-rest", rest, "clean", 1.0, 0),
+        ("clean-subset", sub, "clean", 1.0, LAM, 0),
+        ("noise-subset", sub, "impulse10", 1.0, LAM, 0),
+        ("factor2-subset", sub, "clean", 2.0, LAM, 0),
+        ("clean-rest", rest, "clean", 1.0, LAM, 0),
     ]
+    # The lambda sweep runs LAST (RESEARCH_LOG.md section 11), grouped by lambda so
+    # that an interrupted arm still leaves whole lambda points rather than fragments.
+    for lam in SWEEP_LAMS:
+        spec.append(("lambda-sweep", sub, "clean", 1.0, lam, 0))
     plan = []
-    for arm, vids, cond, factor, seed in spec:
+    for arm, vids, cond, factor, lam, seed in spec:
         if arms and arm not in arms:
             continue
         for vid in vids:
             plan.append(dict(arm=arm, video_id=vid, condition=cond,
-                             factor=factor, lam=LAM, seed=seed))
+                             factor=factor, lam=lam, seed=seed))
     return plan
 
 
@@ -352,7 +357,8 @@ def main():
     if args.dry_run:
         print(f"plan: {len(plan)} runs ({len(plan) - len(todo)} already in "
               f"{csv_path.relative_to(PROJECT_DIR)}, {len(todo)} to run)")
-        print(f"lambda {LAM}  timeout {args.timeout}s  results {csv_path}")
+        print(f"lambda {LAM} (sweep arm also {list(SWEEP_LAMS)})  "
+              f"timeout {args.timeout}s  results {csv_path}")
         print(f"runs under {runs_root}")
         by_arm = {}
         for r in plan:

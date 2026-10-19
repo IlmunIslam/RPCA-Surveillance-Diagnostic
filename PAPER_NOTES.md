@@ -16,6 +16,41 @@
 
 ---
 
+## FRAMING — what the contribution is (author's instruction, 2026-10-20)
+
+**The contribution is not "SS-RTD does not transfer."** It is that **a
+three-component model's designated noise term becomes a misfit sink when that
+noise is absent, and the sink coincides with the sparse term more completely the
+emptier the scene.** SS-RTD is the **instrument**, not the subject.
+
+Why this is the stronger claim: "does method X transfer to dataset Y" is a yes/no
+about one method on one dataset, and a reviewer can discount it as a tuning or
+dataset artifact. The sink claim is a statement about the *model class* — any
+`X = L + S + E` decomposition that keeps an unconditional L1 noise term — and the
+clean-subset checkpoint gives it a **dose-response** (enrichment vs
+`foreground_density`, Spearman −0.731, log-log slope −0.54; `RESEARCH_LOG.md`
+§10.3), which is evidence about mechanism rather than about suitability. The λ
+sweep (§11) tests whether it survives the method's only parameter; if it does, the
+sink is structural rather than a tuned coincidence.
+
+**Places in the record that currently read the other way round** and need
+rewording when the manuscript is drafted (flagged 2026-10-20, deliberately **not**
+rewritten yet):
+
+| file | line | current framing |
+|---|---|---|
+| `CLAUDE.md` | 11 | "whether a method designed … transfers to sharp-edged surveillance foreground" |
+| `START_HERE.md` | 10, 115 | "used to test whether a method … transfers" |
+| `RESEARCH_PLAN.md` | 15, 42, 67 | the research question *is* "does it transfer?"; "smooth-vs-sharp comparison" |
+| `RESEARCH_LOG.md` | 707-708 | §7.4 "the smooth-vs-sharp finding the pivot exists to test" |
+| `PAPER_NOTES.md` | item 18 close | same "smooth-vs-sharp finding" phrase |
+
+`IMPLEMENTATION_PLAN.md`'s "smooth-vs-sharp figures" is a figure filename and is
+harmless. Note that the smooth-vs-sharp transfer question is **not wrong** -- it is
+the narrower special case, and it remains the right description of the *experiment*.
+It is the wrong description of the *contribution*.
+
+
 ## For the Methodology section (deviations that must be disclosed)
 
 1. **RANK RULE INFEASIBILITY.** The paper's rank rule

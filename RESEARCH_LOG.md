@@ -1084,6 +1084,60 @@ the `lambda` sweep remains deferred pending this checkpoint, and §10.3 is an ar
 running it, since the density dependence may interact with `lambda`.
 
 
+## 11. The lambda sweep arm — decided 2026-10-20
+
+**Decision (author).** The sweep is **IN**, queued *after* the existing arms rather
+than interrupting them: four more `lambda` values on the same 20-video subset, clean
+condition, factor 1.0, about 36 h.
+
+**Reasoning (author's, recorded verbatim in substance).** The checkpoint is what
+decided it: 20/20 replication with a dose-response (rho = -0.73) is a strong enough
+effect that it is worth knowing whether it survives the method's **only** parameter,
+and a reviewer will ask. The sweep was deferred on 2026-10-18 precisely so this
+decision could be made on evidence (§8, and the deferral note in §9) -- if edge
+sharing had not replicated across the 20, the sweep would have been moot. It
+replicated, so the sweep is now the natural next question.
+
+**Sampling: {0.2, 0.6, 0.8, 1.0}**, giving the grid **{0.2, 0.4, 0.6, 0.8, 1.0}**
+with the completed `lambda = 0.4`. Rationale: the paper states `lambda` in [0.2, 1],
+so both **endpoints** must be covered -- the reviewer's question is "did you test the
+range you claim?" -- and five points suffice to show monotonicity or to break it.
+Extra points are cheap to add *if* the response turns out non-monotonic, and
+expensive to add pre-emptively (each additional value is 20 runs, about 8.5 h).
+
+**The noise condition does NOT get the sweep in this batch**, and this is a judgement
+to revisit rather than a closed question. It would double the arm to 160 runs
+(about +33 h) for a claim that is corroborative rather than primary, and the
+`lambda = 0.4` decomposition already shows the enrichment is ~2.3x on uncorrupted
+voxels against 0.99x on corrupted ones (§9.4). **If the clean sweep shows `lambda`
+materially moves enrichment**, the targeted follow-up is the noise condition at the
+two extremes only (`lambda` 0.2 and 1.0, 20 videos, 40 runs, about 17 h) as a
+bracketing check -- the same evidence-first logic that produced this decision.
+
+**What the sweep can and cannot show.** `lambda` weights the anisotropic TV term, so
+it acts on `S` directly and on `E` only indirectly, through the split. Therefore:
+
+- If enrichment is **largely flat** in `lambda`, that is the **stronger** result --
+  the sink is structural, not an artifact of one tuning, which is exactly the
+  model-class claim the framing section of `PAPER_NOTES.md` sets out.
+- If enrichment **falls sharply** as `lambda` rises, the honest reading is that a
+  smoother `S` claims fewer sharp voxels and the overlap shrinks with it; the finding
+  would then need stating as conditional on the TV weight, and the density
+  dose-response (§10.3) re-checked at the endpoint values.
+- The sweep cannot separate "`E` stops claiming edges" from "`S` stops claiming
+  edges", since enrichment is a property of the pair. The per-component supports
+  (`S_gt005_pct`, `E_gt005_pct`, both already columns) are what distinguishes them,
+  so read those alongside the ratio rather than the ratio alone.
+
+**Mechanics.** The arm is appended to `build_plan()` in `src/phase3_runner.py` as
+`lambda-sweep` and runs last. The live runner (pid 14268, started 2026-10-19 09:49)
+already holds its own 220-run plan in memory and will **not** pick the arm up; the
+new runs happen when the runner is next started, after the current process finishes,
+and resume skips everything already in the CSV. The CSV key includes `lam`, so the
+new rows cannot collide with the `lambda = 0.4` rows. Total batch becomes **300
+runs**.
+
+
 ## Verification provenance
 
 Facts above were checked with, and are reproducible via:
