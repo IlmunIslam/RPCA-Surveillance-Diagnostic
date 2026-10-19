@@ -128,7 +128,11 @@ def environment():
         "tz": time.strftime("%Z%z"),
         "commit": _git("rev-parse", "HEAD"),
         "commit_short": _git("rev-parse", "--short", "HEAD"),
-        "dirty": bool(_git("status", "--porcelain")),
+        "dirty": bool(_git("status", "--porcelain", "--untracked-files=no")),
+        "untracked_paths": len([l for l in
+                                _git("status", "--porcelain",
+                                     "--untracked-files=normal").splitlines()
+                                if l.startswith("??")]),
         "python": platform.python_version(),
         "numpy": numpy.__version__,
         "scipy": scipy_version,
