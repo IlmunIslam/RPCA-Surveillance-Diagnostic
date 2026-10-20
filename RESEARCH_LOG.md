@@ -1138,6 +1138,58 @@ new rows cannot collide with the `lambda = 0.4` rows. Total batch becomes **300
 runs**.
 
 
+## 12. Phase 3 noise-subset — 20/20 runs, 2026-10-20
+
+20 of 20 complete, **zero failures**. One run (`video_81`, 115.8 min) overran because
+the machine entered Modern Standby for ~92 min (Kernel-Power 506 at 00:27:30, 507 at
+02:02:25); it completed correctly on resume and the per-run timeout did **not** fire,
+because parent and child were suspended together. **The timeout bounds active time,
+not wall-clock.** `PHASE3_NOTES.md` §1's claim that "sleep is disabled on AC power" is
+falsified -- Modern Standby is a different mechanism and it fired. Nothing was lost and
+no number is affected; only wall-clock scheduling is.
+
+### 12.1 The clean-input finding is corroborated, not replaced
+
+Enrichment measured on **uncorrupted voxels only** (from each run's own
+`supports.npz` and `noise_mask.npz`; corrupted fraction exactly 10.000% on all 20),
+against the clean arm on the same 20 videos:
+
+| | clean arm | noise arm, uncorrupted voxels |
+|---|---|---|
+| median enrichment | **40.4x** | **41.9x** |
+| range | 2.4x - 199.8x | 2.31x - 208.9x |
+| vs `foreground_density` | rho -0.731 | **rho -0.738** (p~0.0002) |
+
+**Rank correlation between the two arms: rho = +0.994.** Giving `E` its designated job
+and measuring away from the corruptions recovers the same per-video enrichment and the
+same dose-response. This is §9.4's single-video decomposition replicated across 20, and
+it is the evidence that the sink is **not** an absence-of-noise artifact: `E` keeps its
+edge-locked excess at full strength while simultaneously removing impulses.
+
+Reconstruction: median gain **+20.35 dB** (range 13.02-28.38), SSIM median 0.988.
+`video_01` is weakest again at +13.02 dB, consistent with §10.2.
+
+### 12.2 Two claims made at n=11 and RETRACTED at n=20
+
+Recorded as retractions rather than dropped, because both were reported to the author
+mid-arm.
+
+1. **"`E`'s precision tracks scene emptiness" -- WITHDRAWN.** At n=11 it was Spearman
+   -0.764 (p~0.006); at n=20 it is **-0.248 (p~0.29)**. The first eleven videos all had
+   `foreground_density` below 0.42%, and the busier ones broke the pattern
+   (`video_105`, fg 1.025%, precision 0.973; `video_46`, fg 1.424%, precision 0.748).
+   Precision@0.05 spans 0.628-0.996, median 0.925, and **what drives it is unexplained**.
+   Lesson: a mid-arm correlation on a subset ordered by the very variable under test is
+   not evidence.
+2. **"Recall vs density is significant" -- true but meaningless.** rho = -0.791
+   (p < 0.0001), yet recall@0.05 spans only **0.8950-0.9047** (sd 0.00195). The rank
+   test fires on a monotone 0.5% drift. `recall@0.05 = 0.900` is the **threshold's
+   detection ceiling**, not a property of the method (`noise_detectable_pct` ~99.6%:
+   about 10% of corrupted values are redrawn too close to the original to exceed 0.05).
+   **Do not report recall@0.05 as a between-video measure.** Precision and the dB gain
+   are the informative columns.
+
+
 ## Verification provenance
 
 Facts above were checked with, and are reproducible via:

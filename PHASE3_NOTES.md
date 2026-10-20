@@ -16,7 +16,12 @@ repeatedly. It was investigated, and ruled out:
   System log;
 - not a Python crash — no Application Error or Hang events, and the log stopped cleanly
   mid-iteration with no traceback;
-- not sleep — sleep is disabled on AC power.
+- not sleep — sleep is disabled on AC power.  ⚠️ **Partly falsified 2026-10-20:** Modern Standby (connected standby) is a
+  separate mechanism from the sleep that is disabled here, and it DID fire --
+  Kernel-Power 506/507 suspended a run for ~92 min (`RESEARCH_LOG.md` §12).
+  The per-run timeout does not catch it, since parent and child are suspended
+  together, so it bounds active time only. `powercfg /change standby-timeout-ac 0`
+  is the preventive setting.
 
 Conclusion: **the harness reaps its own background-task wrapper and takes the child
 Python process with it.**
