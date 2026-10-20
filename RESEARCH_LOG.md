@@ -1190,6 +1190,77 @@ mid-arm.
    are the informative columns.
 
 
+## 13. The logoff that killed the batch, and the watchdog that survives one
+
+**2026-10-20 10:38:24-10:38:37.** The machine's user session ended (logoff or
+restart). The in-flight worker took exit **1073807364 = 0x40010004**
+(`DBG_CONTROL_C`, the console interrupt delivered on session shutdown); the next
+seven worker launches could not even initialise, each exiting in 1-3 s with
+**3221226091 = 0xC000026B** (`STATUS_DLL_INIT_FAILED_LOGOFF`, "the application
+failed to initialize because the window station is shutting down"). The runner
+marched through eight plan entries in 13 seconds marking each FAILED, then died
+itself mid-`START` of run 57. **`watchdog_phase3.ps1` died in the same event** --
+its log holds exactly one line, "watchdog started", from the previous day.
+
+**Cost: ~18 hours of idle time**, discovered only when the author next checked. The
+restart itself cost seconds. That asymmetry is the whole lesson: on this machine the
+expensive failure is not the crash, it is the *undetected* crash.
+
+### 13.1 Nothing was corrupted, and the completion-marker design is now field-tested
+
+All nine incomplete `factor2-subset` directories (the eight logged FAILED plus
+`video_134`, started and never finished) contained **exactly one file,
+`worker.log`** -- no `summary.json`, no `history.csv`, no npz. Every directory that
+*does* have a `summary.json` has a CSV row, so the adopt path ("worker finished but
+the row never landed") could not fire for anything unfinished. `summary.json` is
+written **last**, as the completion marker, and a real kill at an arbitrary moment
+confirmed what the smoke test could only assert. A plain relaunch recomputes all 12
+pending `factor2` runs; `--retry-failed` is not needed, because resume keys on the
+CSV and a failed run is simply still pending.
+
+### 13.2 `watchdog_system.ps1` + a SYSTEM Scheduled Task
+
+A user-session watchdog cannot survive a logoff, because it dies in it. The fix is a
+Scheduled Task running as **SYSTEM** every 15 minutes (`install_watchdog_task.ps1`,
+task name `Phase3BatchWatchdog`), which survives logoff and resumes after a reboot.
+One shot per invocation: check, act if needed, exit.
+
+Design points, each there for a reason already paid for:
+
+- **`STOP_BATCH` kill switch, checked before every relaunch** (author's requirement).
+  Without it a SYSTEM task would resurrect the batch every 15 minutes whenever the
+  author deliberately stopped it. It logs the sighting and exits.
+- **Never two writers.** It exits without acting while a runner is alive, and *also*
+  while a worker is still solving without its runner -- that worker will write
+  `summary.json` and the next runner adopts the row, whereas relaunching immediately
+  would put two 2.8 GB-peak solvers on a 15.8 GB machine.
+- **Stall protection.** State lives in `logs/watchdog_state.json` (each invocation is
+  a new process). After 4 relaunches that add no rows it refuses to relaunch again
+  and says how to re-arm, so a permanently broken batch is not resurrected forever.
+- **Log collapsing.** An unchanged state is logged on first sighting and then at most
+  every 6 hours, so a quiet watch does not write 96 lines a day.
+- **`STOP_BATCH` and `logs/watchdog_state.json` are gitignored**, deliberately: a
+  tracked kill switch could be resurrected by a `git checkout` and silently stop the
+  watchdog, which is the same class of failure as a guardrail that reports itself
+  active while doing nothing.
+
+**Tested 2026-10-21, logic branch by branch** (with `-DryRun`, which decides and logs
+but launches nothing): kill switch present -> refuses and logs; same state again ->
+collapsed, no second line; kill switch removed -> "WOULD relaunch (48/220 rows)";
+dry run left the state file unchanged; stall counter at 4 -> refuses with the re-arm
+instruction. The **end-to-end logoff test is the author's to run**, since the session
+must actually end.
+
+**What it does not fix:** Modern Standby (a suspended process stays suspended
+whatever launched it -- that is `powercfg`, the author's to set) and a full power-off.
+
+**Known quirk:** the watchdog's completion target is the row count of
+`results/ssrtd_real/plan.csv`, which the runner rewrites at each start. That file
+currently holds the **220**-run plan from the 2026-10-19 start, not the 300-run plan
+with the lambda sweep (§11); the next runner start rewrites it, which happens before
+any further row is appended, so the stale target cannot cause a premature "complete".
+
+
 ## Verification provenance
 
 Facts above were checked with, and are reproducible via:

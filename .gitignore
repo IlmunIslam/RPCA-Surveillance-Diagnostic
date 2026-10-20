@@ -15,3 +15,8 @@ logs/*.log
 # The SS-RTD source paper carries an IEEE republication/redistribution notice.
 # See paper/SOURCE.md for the citation.
 Robust_Tensor_Decomposition_Based_Background_Foreground_Separation_in_Noisy_Videos_and_Its_Applications_in_Additive_Manufacturing.pdf
+
+# Runtime control files for the Phase 3 watchdog -- never tracked, so that a
+# git checkout cannot silently resurrect a kill switch or a stale stall counter.
+STOP_BATCH
+logs/watchdog_state.json

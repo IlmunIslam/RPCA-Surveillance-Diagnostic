@@ -150,6 +150,39 @@ python -u -m src.phase3_runner --arms clean-subset
   environment of every runner start and appends rather than overwrites, so a numpy
   or OS change mid-batch stays visible (`RESEARCH_LOG.md` §6.6 for why).
 
+### The logoff-proof watchdog (2026-10-21)
+
+`watchdog_phase3.ps1` is a user-session process and **dies in a logoff**, which is
+what cost 18 idle hours on 2026-10-20 (`RESEARCH_LOG.md` §13). Use
+`watchdog_system.ps1` via a SYSTEM Scheduled Task instead; keep the old one only for
+watching a run in the foreground.
+
+```powershell
+# install (MUST be an elevated PowerShell -- a SYSTEM task needs admin)
+powershell -NoProfile -ExecutionPolicy Bypass -File ".\install_watchdog_task.ps1"
+powershell -NoProfile -ExecutionPolicy Bypass -File ".\install_watchdog_task.ps1" -Status
+powershell -NoProfile -ExecutionPolicy Bypass -File ".\install_watchdog_task.ps1" -Remove
+
+# decide-and-log without launching anything (safe any time)
+powershell -NoProfile -ExecutionPolicy Bypass -File ".\watchdog_system.ps1" -DryRun
+```
+
+- **Kill switch: create `STOP_BATCH` in the repo root.** While it exists the watchdog
+  will not relaunch, and says so in `logs/watchdog_system.log`. Delete it to re-arm.
+  It does **not** stop a runner that is already running -- kill the python process
+  for that, then the sentinel keeps it stopped.
+- **Stopping the batch deliberately is therefore two steps:** create `STOP_BATCH`,
+  then kill the runner. In the other order the watchdog may relaunch it first.
+- **Logs:** `logs/watchdog_system.log`. An unchanged state is logged once and then at
+  most every 6 hours, so silence is normal; `logs/watchdog_state.json` holds the live
+  state and the stall counter. Both the sentinel and the state file are gitignored on
+  purpose -- a tracked kill switch could be restored by a `git checkout` and silently
+  disarm the watch.
+- **It gives up after 4 relaunches with no new rows** and tells you to delete
+  `logs/watchdog_state.json` once the cause is fixed.
+- **It does not defeat Modern Standby or a power-off.** For standby,
+  `powercfg /change standby-timeout-ac 0`.
+
 ### Two things the real launch taught (2026-10-19)
 
 - **Never redirect the detached launch into the runner's own log file.** The
