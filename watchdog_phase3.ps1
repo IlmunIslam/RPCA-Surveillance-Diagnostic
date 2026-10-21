@@ -53,7 +53,19 @@ Log "watchdog started (pid $PID)"
 $stall    = 0
 $lastRows = -1
 
+$stopFile = Join-Path $proj "STOP_BATCH"
+$sawStop  = $false
+
 while ($true) {
+    # Same kill switch as watchdog_system.ps1, so STOP_BATCH stops BOTH watchdogs.
+    # Without this, deliberately stopping the batch means fighting this one.
+    if (Test-Path $stopFile) {
+        if (-not $sawStop) { Log "STOP_BATCH present - not relaunching (will keep checking)"; $sawStop = $true }
+        Start-Sleep -Seconds 60
+        continue
+    }
+    if ($sawStop) { Log "STOP_BATCH removed - watching again"; $sawStop = $false }
+
     $target = Get-RowCount $planCsv
     $rows   = Get-RowCount $csv
 
