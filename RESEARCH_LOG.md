@@ -1261,6 +1261,73 @@ with the lambda sweep (§11); the next runner start rewrites it, which happens b
 any further row is appended, so the stale target cannot cause a premature "complete".
 
 
+## 14. Phase 3 factor2-subset — 20/20 runs, 2026-10-22
+
+The robustness arm: the same 20 videos, clean, `lambda = 0.4`, but `factor = 2.0`,
+i.e. the `E` threshold **as printed** in eq. (12) (`2/beta^X`) rather than the
+`1/beta^X` that Appendix A implies and that the Candela gate chose (§6.1, PAPER_NOTES
+item 11). Robustness table, **not** a main result (author's decision, §8).
+
+20 of 20 complete, zero failures. One run (`video_01`) took **57.4 min** against a
+24-30 min norm and came within 3 minutes of the 3,600 s timeout: iterations ran
+49-60 s because an unrelated game held 2,974 MB and free RAM fell to 1.45 GB. That is
+the **paging** signature -- many iterations uniformly slow -- as distinct from the
+Modern Standby signature of §12, which was one 92-minute iteration. Numbers are
+unaffected either way; only wall time is.
+
+### 14.1 The finding survives the printed threshold
+
+| | factor 1.0 | factor 2.0 |
+|---|---|---|
+| median `E` occupancy (`|E| > 0.05`) | 0.87% | 0.51% |
+| median enrichment | 40.4x | **21.9x** |
+| enrichment > 1 | 20/20 | **20/20** |
+| rank agreement between factors | -- | **Spearman rho +0.847** (p < 1e-5) |
+
+Doubling the threshold roughly halves the effect but never removes it, and the
+**ordering of videos is preserved**: the scenes with strong and weak enrichment are
+the same under either threshold. So the §10.3 density dose-response is not an
+artifact of the threshold choice. Report it this way: the effect persists **despite**
+a worse constraint fit (`err_X_final` is about 2x larger at factor 2.0 -- the gate
+already preferred factor 1.0), not as evidence that the two thresholds are
+equivalent.
+
+### 14.2 The metric-stability claim, with evidence rather than instances
+
+The author asked (2026-10-21) whether "raw P(E|S) moves while enrichment does not" is
+a defensible contribution or an over-reading of three instances of one identity.
+Answer recorded then: three instances of `P(E|S) = enrichment x P(E)` are not three
+pieces of evidence, since the relation is an identity; the empirical content is the
+separate claim that enrichment is the *more stable* quantity, which needs paired
+data. This arm supplies it -- 20 paired videos under a 2x threshold perturbation,
+median absolute relative change:
+
+| quantity | median \|change\| |
+|---|---|
+| raw P(E\|S) | **79.5%** |
+| enrichment | **36.8%** |
+| | **2.16x less sensitive** |
+
+**The defensible sentence** is therefore: *the raw co-occurrence share is about twice
+as sensitive to the E-threshold as the enrichment ratio, because the raw share
+absorbs the change in E's occupancy while the ratio divides it out* (n = 20 paired,
+median |change| 79.5% vs 36.8%). Note what it is **not**: "enrichment barely moves"
+is wrong -- it moves 37%. And the identity alone cannot produce the factor of 2.16;
+only the data can, which is what makes this a measurement result rather than a
+restatement of conditional probability. Keep it as a Methods paragraph plus a
+Discussion sentence, **not** a contribution bullet (PAPER_NOTES framing section).
+
+Mechanism visible in the per-video table: `E` occupancy falls ~50% while raw P(E|S)
+falls ~80%, so the thresholded overlap shrinks **faster** than either marginal. The
+raw share is therefore not simply proportional to occupancy either -- another reason
+not to quote it as an effect size.
+
+**Outliers:** `video_145` is the only video whose enrichment *rises* at factor 2.0
+(+9.6%); `video_178` (-13.7%) and `video_140` (-21.2%) show the smallest falls. All
+three have low `E` occupancy at factor 1.0 (0.49%, 0.15%, 0.25%), where doubling the
+threshold removes comparatively little.
+
+
 ## Verification provenance
 
 Facts above were checked with, and are reproducible via:
