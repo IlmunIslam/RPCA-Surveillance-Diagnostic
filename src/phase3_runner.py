@@ -104,12 +104,29 @@ KEY = ("video_id", "condition", "factor", "lam", "seed")
 _GIT = shutil.which("git") or r"C:\Program Files (x86)\Git\cmd\git.exe"
 
 
+UNKNOWN = "unknown"
+
+
 def _git(*args):
+    """stdout on success; **None** if git could not be run or exited non-zero.
+
+    The distinction matters more than it looks. `git status --porcelain` returns an
+    EMPTY string for a clean tree, so "" is a legitimate *answer*, not a failure --
+    and the old version returned "" for both. That is how the 2026-11-03 manifest
+    entry came to assert `dirty: false` on a tree nobody had checked, after git
+    turned out to be absent from SYSTEM's PATH (RESEARCH_LOG.md section 17.2).
+    A check whose failure is indistinguishable from a reassuring answer is worse
+    than no check: see PHASE3_NOTES.md, "Checks that report confidently while
+    structurally blind".
+    """
     try:
-        return subprocess.run([_GIT, *args], cwd=str(PROJECT_DIR), capture_output=True,
-                              text=True, timeout=30).stdout.strip()
+        res = subprocess.run([_GIT, *args], cwd=str(PROJECT_DIR), capture_output=True,
+                             text=True, timeout=30)
     except Exception:
-        return ""
+        return None
+    if res.returncode != 0:
+        return None
+    return res.stdout.strip()
 
 
 def environment():
@@ -135,16 +152,22 @@ def environment():
         scipy_version = scipy.__version__
     except Exception:
         scipy_version = None
+
+    commit = _git("rev-parse", "HEAD")
+    commit_short = _git("rev-parse", "--short", "HEAD")
+    porcelain = _git("status", "--porcelain", "--untracked-files=no")
+    untracked = _git("status", "--porcelain", "--untracked-files=normal")
+
     return {
         "started_at": datetime.now().isoformat(timespec="seconds"),
         "tz": time.strftime("%Z%z"),
-        "commit": _git("rev-parse", "HEAD"),
-        "commit_short": _git("rev-parse", "--short", "HEAD"),
-        "dirty": bool(_git("status", "--porcelain", "--untracked-files=no")),
-        "untracked_paths": len([l for l in
-                                _git("status", "--porcelain",
-                                     "--untracked-files=normal").splitlines()
-                                if l.startswith("??")]),
+        "commit": commit if commit is not None else UNKNOWN,
+        "commit_short": commit_short if commit_short is not None else UNKNOWN,
+        "dirty": bool(porcelain) if porcelain is not None else UNKNOWN,
+        "untracked_paths": (len([l for l in untracked.splitlines()
+                                 if l.startswith("??")])
+                            if untracked is not None else UNKNOWN),
+        "git": _GIT if commit is not None else f"{UNKNOWN} (tried {_GIT})",
         "python": platform.python_version(),
         "numpy": numpy.__version__,
         "scipy": scipy_version,
@@ -388,14 +411,20 @@ def main():
         print(f"disk: {free_gb():.1f} GB free (stops below {MIN_FREE_GB} GB)")
         print(f"environment: numpy {env['numpy']}, blas {env['blas'].get('name')} "
               f"{env['blas'].get('version')}, python {env['python']}, commit "
-              f"{env['commit_short']}{' (DIRTY)' if env['dirty'] else ''}")
+              f"{env['commit_short']}"
+              f"{' (DIRTY)' if env['dirty'] is True else ''}"
+              f"{' (TREE STATE UNKNOWN)' if env['dirty'] == UNKNOWN else ''}")
         return 0
 
     acquire_lock()
     env = write_manifest(MANIFEST if not args.smoke else SMOKE_DIR / "smoke_manifest.json")
-    if env.get("dirty"):
+    if env.get("dirty") is True:
         log("WARNING: working tree is dirty; rows will carry a commit that does not "
             "describe the code exactly")
+    elif env.get("dirty") == UNKNOWN:
+        log(f"WARNING: git could not be run ({_GIT}); commit and tree state are "
+            f"'{UNKNOWN}' for every row of this run. Provenance is lost, not clean -- "
+            f"fix git's availability and restart rather than trusting these rows.")
     if env.get("changed_since_previous_entry"):
         log(f"NOTE: environment changed since the previous manifest entry: "
             f"{env['changed_since_previous_entry']}")

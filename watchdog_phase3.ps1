@@ -53,6 +53,18 @@ Log "watchdog started (pid $PID)"
 $stall    = 0
 $lastRows = -1
 
+# Resolve python absolutely, as watchdog_system.ps1 does. Bare "python" worked here
+# only because a human starts this script in their own session; it is the same bug
+# that silently cost 10.5 days when the SYSTEM task hit it (RESEARCH_LOG.md §16).
+# Fixed rather than left as a landmine, whether or not this watchdog is retired.
+$pythonExe = $env:PHASE3_PYTHON
+if (-not $pythonExe) { $pythonExe = (Get-Command python -ErrorAction SilentlyContinue).Source }
+if (-not $pythonExe) { $pythonExe = "C:\Users\ilmun\AppData\Local\Programs\Python\Python312\python.exe" }
+if (-not (Test-Path -LiteralPath $pythonExe)) {
+    Log "cannot relaunch: no python at '$pythonExe'. Set PHASE3_PYTHON and restart."
+    exit 1
+}
+
 $stopFile = Join-Path $proj "STOP_BATCH"
 $sawStop  = $false
 
@@ -101,7 +113,7 @@ while ($true) {
 
         Log "runner not running ($rows/$target rows) - relaunching detached (stall=$stall)"
         Start-Process -FilePath "cmd.exe" `
-            -ArgumentList '/c','python -u -m src.phase3_runner >> logs\phase3_runner.stdout.log 2>&1' `
+            -ArgumentList '/c', "`"$pythonExe`" -u -m src.phase3_runner >> logs\phase3_runner.stdout.log 2>&1" `
             -WorkingDirectory $proj -WindowStyle Hidden
         Start-Sleep -Seconds 10
         $p2 = Get-RunnerProc

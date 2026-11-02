@@ -150,6 +150,38 @@ python -u -m src.phase3_runner --arms clean-subset
   environment of every runner start and appends rather than overwrites, so a numpy
   or OS change mid-batch stays visible (`RESEARCH_LOG.md` §6.6 for why).
 
+### Checks that report confidently while structurally blind
+
+Four instances in this project, in different clothes each time. The common shape:
+**the check's failure mode is indistinguishable from a reassuring answer**, so it
+reports success it never established.
+
+| # | the check | what it claimed | why it was blind |
+|---|---|---|---|
+| 1 | the `Edit(...)` deny rules on the frozen CSVs | documented as guarding them | the session was keyed to the parent folder, so `.claude/settings.json` was never read. A redirection appended to `all_results.csv` on the first real test (ARCHIVE_BASELINE §7) |
+| 2 | `watchdog_system.ps1`'s relaunch | logged "relaunching" | it never checked whether the process started. `python` was not on SYSTEM's PATH, so it logged two successes while achieving nothing (RESEARCH_LOG §16.1) |
+| 3 | "the task does not exist -- verified two ways across 412 tasks" | absence of the Scheduled Task | `C:\Windows\System32\Tasks\` is Access-denied to a standard user, and `Win32_Process.CommandLine` is unreadable for session-0 processes. Enumeration from an unelevated session cannot prove absence (RESEARCH_LOG §17.1) |
+| 4 | `dirty = bool(_git("status", "--porcelain"))` | a clean working tree | a clean tree returns `""` **and so does a git that never ran**. With git absent under SYSTEM the manifest asserted `dirty: false` on a tree nobody checked (RESEARCH_LOG §17.2) |
+
+**Two rules, both earned:**
+
+1. **Every check must be able to say "unknown".** `_git()` now returns `None` on
+   failure and `environment()` records `"unknown"` for `commit`, `commit_short`,
+   `dirty` and `untracked_paths`, with the runner logging "provenance is lost, not
+   clean". A tri-state is the fix; a boolean that collapses failure into the happy
+   value is the bug.
+2. **Verify by observing the thing claimed, not by the absence of a complaint.** A
+   guardrail is proven by a blocked write, a watchdog by a pid and a new row, a
+   Scheduled Task by a log line it wrote -- never by a query that could be blind to
+   what it is looking for.
+
+A fifth near-instance, worth remembering because it was self-inflicted: watching
+`logs/watchdog_system.log` with `tail -f` **silently blocked** PowerShell's
+`Add-Content` to it, so two real watchdog firings wrote state but no log line. The
+orphaned `tail` handles survived stopping the monitor. **Observing a Windows log file
+can suppress writes to it** -- when a log goes quiet, check for readers holding it
+before concluding the writer stopped.
+
 ### A space in the project path has now broken THREE launch commands
 
 `E:\works\Video compression Research\...` contains a space, and every mechanism that
