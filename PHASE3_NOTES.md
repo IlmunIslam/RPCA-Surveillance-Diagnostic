@@ -150,6 +150,51 @@ python -u -m src.phase3_runner --arms clean-subset
   environment of every runner start and appends rather than overwrites, so a numpy
   or OS change mid-batch stays visible (`RESEARCH_LOG.md` §6.6 for why).
 
+### A space in the project path has now broken THREE launch commands
+
+`E:\works\Video compression Research\...` contains a space, and every mechanism that
+builds a command as a **string** has failed on it. Three instances, same root cause:
+
+| when | what broke | symptom |
+|---|---|---|
+| 2026-09-17 | `Start-Process -ArgumentList` given an **array** with a spaced script path | the path was silently dropped and the watchdog never started (§1, "Two gotchas") |
+| 2026-10-19 | `cmd /c ... >> logs\phase3_runner.log` redirected into the runner's **own** log | `PermissionError` within a second (above) |
+| 2026-11-02 | `install_watchdog_task.ps1` passed a command **string** to `schtasks /create /tr` | `ERROR: Invalid argument/option - 'compression'.` -- PowerShell strips one layer of quoting, so the path split |
+
+**Rule: never hand a spaced path to something that will re-parse it as a shell string.**
+Prefer an API that takes the path as its own argument:
+
+- Scheduled tasks: `Register-ScheduledTask` with `New-ScheduledTaskAction -Execute ...
+  -Argument ...` objects, **not** `schtasks.exe`. The path is stored verbatim and no
+  shell re-splits it. This is what the installer now does.
+- `Start-Process`: pass `-ArgumentList` as ONE quoted string, and the directory via
+  `-WorkingDirectory` rather than inside a `cd`.
+- Python: `subprocess.run([...])` with a list, never `shell=True`.
+
+**And test the quoting on this exact path**, not a short one. The 2026-11-02 fix was
+verified by registering a real temporary task with the same action construction,
+running it, and confirming `LastTaskResult: 0` plus the log line the script writes --
+then removing the task.
+
+### Committed but never run -- the gap this exposed
+
+`install_watchdog_task.ps1` was committed on 2026-10-21 and first executed on
+2026-11-02, when it failed immediately. The watchdog's **decision logic** had been
+tested branch by branch; its **installer** had not been run once. Auditing the repo for
+anything else in that position, 2026-11-02:
+
+| code path | status |
+|---|---|
+| `install_watchdog_task.ps1` | **was** untested; now verified end-to-end (quoting, execution, exit code) |
+| `--retry-failed` in `phase3_runner.py` | **was dead code** -- declared, documented, and never read in the body. Harmless only because resume keys on the CSV, so a failed run is already pending. Now documented as an accepted no-op rather than left looking like a safety net. |
+| the **relaunch branch** of `watchdog_system.ps1` (its `Start-Process`) | still unexercised -- everything around it is tested, but the launch itself has never fired. It gets its first real exercise the first time the SYSTEM task relaunches the batch, and `logs/watchdog_system.log` plus a growing row count are the proof. Its `Start-Process` pattern is the one already proven by hand. |
+| the `STOP_BATCH` branch of `watchdog_phase3.ps1` | unexercised -- added 2026-10-22; the sentinel has never existed while that watchdog was running. |
+| the runner's disk-guard `STOPPING` branch | logic verified 2026-10-18 (§9.1) but never fired against a real full disk. |
+
+The lesson is not "test more", it is **the untested line is the one that runs when
+everything else has already gone wrong** -- an installer, a relaunch, a disk guard. Each
+of those only executes in a failure, which is exactly when nobody is watching.
+
 ### The logoff-proof watchdog (2026-10-21)
 
 `watchdog_phase3.ps1` is a user-session process and **dies in a logoff**, which is

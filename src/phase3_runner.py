@@ -338,8 +338,13 @@ def main():
                     help="two-run smoke plan into results/scratch/phase3_smoke, "
                          "writing a scratch CSV, never the Phase 3 one")
     ap.add_argument("--dry-run", action="store_true", help="print the plan and exit")
+    # Kept as an accepted no-op so documented commands do not break. Resume keys
+    # on the CSV, so a run that failed has no row and is ALREADY pending; there is
+    # nothing extra to re-queue. It was dead code (declared, never read) until
+    # 2026-11-02 -- see PHASE3_NOTES.md, "Committed but never run".
     ap.add_argument("--retry-failed", action="store_true",
-                    help="also re-queue runs that previously failed (no row, no summary)")
+                    help="accepted and ignored: a failed run has no CSV row and is "
+                         "already re-queued by ordinary resume")
     ap.add_argument("--timeout", type=int, default=TIMEOUT_S)
     ap.add_argument("--limit", type=int, default=0, help="stop after N runs (testing)")
     args = ap.parse_args()
