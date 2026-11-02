@@ -105,6 +105,7 @@ _GIT = shutil.which("git") or r"C:\Program Files (x86)\Git\cmd\git.exe"
 
 
 UNKNOWN = "unknown"
+_GIT_ERROR = None      # why the last git call failed, surfaced in the manifest
 
 
 def _git(*args):
@@ -119,12 +120,25 @@ def _git(*args):
     than no check: see PHASE3_NOTES.md, "Checks that report confidently while
     structurally blind".
     """
+    global _GIT_ERROR
     try:
-        res = subprocess.run([_GIT, *args], cwd=str(PROJECT_DIR), capture_output=True,
-                             text=True, timeout=30)
-    except Exception:
+        # -c safe.directory: when the runner is launched by the SYSTEM Scheduled Task,
+        # git runs as SYSTEM against a repo owned by ILMUN\ilmun and refuses with
+        # "detected dubious ownership" (exit 128). That is why the 2026-11-03 01:16
+        # manifest entry read commit 'unknown' even though git WAS found -- Git's cmd
+        # directory is on the machine PATH. Passing the exception per-invocation keeps
+        # it in the repo: no admin, no global git config, nothing to re-apply on
+        # another machine.
+        res = subprocess.run(
+            [_GIT, "-c", f"safe.directory={PROJECT_DIR.as_posix()}", *args],
+            cwd=str(PROJECT_DIR), capture_output=True, text=True, timeout=30)
+    except Exception as exc:
+        _GIT_ERROR = f"{type(exc).__name__}: {exc}"
         return None
     if res.returncode != 0:
+        # Keep the reason: a bare "unknown" tells a future reader nothing.
+        _GIT_ERROR = (f"exit {res.returncode}: "
+                      f"{(res.stderr or '').strip().splitlines()[:1]}")
         return None
     return res.stdout.strip()
 
@@ -167,7 +181,8 @@ def environment():
         "untracked_paths": (len([l for l in untracked.splitlines()
                                  if l.startswith("??")])
                             if untracked is not None else UNKNOWN),
-        "git": _GIT if commit is not None else f"{UNKNOWN} (tried {_GIT})",
+        "git": (_GIT if commit is not None
+                else f"{UNKNOWN} (tried {_GIT}; {_GIT_ERROR})"),
         "python": platform.python_version(),
         "numpy": numpy.__version__,
         "scipy": scipy_version,

@@ -1519,6 +1519,54 @@ written at 00:46:06 — though by Python's `open(..., "a")`, not `Add-Content`.
 the next firing logs normally, which costs nothing to observe.
 
 
+## 18. Provenance under SYSTEM, finally diagnosed, 2026-11-03
+
+The author killed the batch from an elevated window; the SYSTEM task relaunched it at
+**01:16:04** (runner pid 18796) and **logged it properly** -- `relaunch took: runner
+pid 18796` -- confirming both the relaunch and that the missing log lines of §17.3 were
+caused by held file handles, not by the watchdog.
+
+**The log mystery is closed, and the cause was self-inflicted.** `TaskStop` ended the
+monitor's shell but **orphaned its two `tail` processes**, which kept
+`logs/watchdog_system.log` open. Evidence rather than inference: the state file
+recorded a real firing at 01:01:03 with no log line, and an `Add-Content` probe wrote
+immediately once pids 8148/8640 were killed. MSYS `tail -f` holds a Windows file in a
+share mode that blocks PowerShell's `Add-Content`, while Python's `open(..., "a")` on
+the same tail's other file kept working. **Observing a log can suppress writes to it.**
+
+### 18.1 git was failing for a different reason than assumed
+
+The 01:16 manifest entry read `commit 'unknown'`, `dirty 'unknown'`, `git unknown
+(tried C:\Program Files (x86)\Git\cmd\git.EXE)`. The tri-state of §17.2 worked exactly
+as intended -- it reported the failure instead of asserting a clean tree -- but the
+absolute-path fix had **not** solved the underlying problem, and the reason was not the
+one §17.2 recorded:
+
+| checked | result |
+|---|---|
+| repo directory owner | `ILMUN\ilmun` |
+| Git's `cmd` dir on the **machine** PATH | **yes** -- so SYSTEM finds git without any fallback |
+| `safe.directory` in system or global git config | **none** |
+| `git -c safe.directory=<repo> rev-parse --short HEAD` | works (`bd37082`) |
+
+So git was never missing under SYSTEM. It runs as SYSTEM against a repo owned by
+another user and refuses with **"detected dubious ownership"** (exit 128). The earlier
+PATH diagnosis was right about python and wrong about git -- the symptom was identical,
+which is precisely why the tri-state mattered: a blank commit would have been read as
+"the PATH fix didn't take".
+
+**Fix:** `_git()` passes `-c safe.directory=<PROJECT_DIR>` on every invocation. Kept
+per-invocation deliberately: no admin, no global git config, nothing to re-apply on
+another machine or remember after a reinstall. `_GIT_ERROR` now carries the reason into
+the manifest's `git` field, so a future failure explains itself instead of saying only
+"unknown".
+
+⚠️ **The runner started at 01:16 still stamps `commit 'unknown'` on every row it
+writes**, because `environment()` is captured once at start. One more restart is needed
+for the remaining 186 rows to carry provenance -- the author's call, weighed against
+leaving the batch undisturbed.
+
+
 ## Verification provenance
 
 Facts above were checked with, and are reproducible via:
