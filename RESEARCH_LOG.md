@@ -1448,6 +1448,77 @@ fail on its first real execution, after `install_watchdog_task.ps1` and
 `--retry-failed`. The audit predicted this branch specifically.
 
 
+## 17. The SYSTEM kill test — PASSED, with three findings, 2026-11-03
+
+The author re-registered the task and asked for the relaunch to be proven **under
+SYSTEM**, not under their account, on the grounds that verifying by construction is
+what produced §16's bug.
+
+**Test.** Runner (pid 2452) and worker (13516) killed at **00:32:27**; `STOP_BATCH`
+absent; no user-account watchdog running, so only the SYSTEM task could act.
+
+**Result: PASSED.** At **00:46:05** — 13.6 minutes later, inside the 15-minute
+schedule — the task relaunched the runner, which started the worker at 00:46:06 and
+resumed `video_64` from scratch. Both processes alive in **session 0** (runner 11752,
+worker 6368). The absolute-python fix of §16.1 works under SYSTEM, and the last
+unexercised failure path is closed.
+
+### 17.1 A non-elevated session cannot see SYSTEM's work — two wrong conclusions
+
+Twice during this test the obvious check gave the wrong answer, and both times it was
+reported as fact before being questioned:
+
+| check | what it said | the truth |
+|---|---|---|
+| `Get-ScheduledTask`/`schtasks /query` across 412 tasks | "no Phase3 task exists" | `C:\Windows\System32\Tasks\` is **Access denied** to a standard user, so enumeration is not proof of absence |
+| `Win32_Process ... Where CommandLine -like '*phase3*'` | "no phase3 processes running" | `CommandLine` and `Owner` are **not readable** for session-0 processes from a non-elevated session, so every SYSTEM-owned process was filtered out |
+
+**Rule for this project: from an unelevated session, verify SYSTEM's work behaviourally
+— log lines, row counts, file mtimes — not by enumeration.** A `Name='python.exe'`
+query with no `CommandLine` predicate does show the processes; it simply cannot say
+what they are.
+
+### 17.2 git is missing under SYSTEM — the provenance field was being lost
+
+The 00:46 manifest entry recorded `commit_short: ''`, `commit: ''`, `dirty: false`.
+Cause: `_git()` called bare `git`, which is on the **user's** PATH only. So a
+SYSTEM-launched runner stamps **every row with an empty commit** — and, worse,
+`dirty: false`, because `bool("")` is False, which asserts a clean tree that was never
+checked. That is precisely the provenance Addition 2 exists to provide ("without it the
+3.5% finding is a caveat nobody can act on").
+
+Fixed the same way `src/compression.py` already handles ffmpeg: resolve once,
+absolutely — `shutil.which("git")` or `C:\Program Files (x86)\Git\cmd\git.exe`.
+Verified by running with a SYSTEM-like PATH: `shutil.which("git")` returns None, the
+fallback resolves, and the commit comes back `bc09e9c` instead of empty.
+
+⚠️ **Consequence for the running batch.** `environment()` is captured **once** at
+runner start, so the runner launched at 00:46 will stamp `commit ''` on *all* of its
+rows. The 114 existing rows are unaffected (user-launched, correct commits). To get
+provenance on the remaining 186, that runner must be restarted once after this fix —
+cheap, since resume costs only the in-flight run.
+
+(A self-inflicted bug worth recording: the first attempt at this fix added `_GIT`
+without a top-level `import shutil`, because the guard "is `import shutil` already
+present" matched a **function-local** `import shutil as _sh` further down the file. It
+failed immediately on import, which is how it was caught.)
+
+### 17.3 The watchdog's own log line for the relaunch is missing
+
+`logs/watchdog_system.log` has no entry for the 00:46 relaunch — its last write is
+00:23:32 — although `logs/watchdog_state.json` *was* updated at 00:46:07 with state
+`relaunched`. So the script ran and took the relaunch branch, but both `Add-Content`
+calls produced nothing.
+
+The most likely cause is self-inflicted: a `tail -n 0 -f` was held open on that exact
+file across the window (00:33 onwards) to watch for the relaunch, and MSYS `tail` can
+open a file in a share mode that blocks PowerShell's `Add-Content`. Against that
+hypothesis: `logs/phase3_runner.log` was being tailed by the same process and *was*
+written at 00:46:06 — though by Python's `open(..., "a")`, not `Add-Content`.
+**Unresolved**, honestly. The tail has been stopped; the falsifiable test is whether
+the next firing logs normally, which costs nothing to observe.
+
+
 ## Verification provenance
 
 Facts above were checked with, and are reproducible via:

@@ -32,6 +32,7 @@ import csv
 import json
 import os
 import platform
+import shutil
 import subprocess
 import sys
 import time
@@ -93,9 +94,19 @@ KEY = ("video_id", "condition", "factor", "lam", "seed")
 
 
 # ----------------------------------------------------------------- environment
+# Resolve git ONCE, absolutely. When the runner is launched by the SYSTEM Scheduled
+# Task (watchdog_system.ps1), bare "git" is not found: git here is a per-user-PATH
+# install and SYSTEM has a different PATH. The first SYSTEM-launched runner
+# (2026-11-03 00:46) therefore wrote commit "" into its manifest entry and would have
+# stamped every row with an empty commit -- losing exactly the provenance the manifest
+# exists for (RESEARCH_LOG.md §16.2). Same fallback pattern as ffmpeg in
+# src/compression.py.
+_GIT = shutil.which("git") or r"C:\Program Files (x86)\Git\cmd\git.exe"
+
+
 def _git(*args):
     try:
-        return subprocess.run(["git", *args], cwd=str(PROJECT_DIR), capture_output=True,
+        return subprocess.run([_GIT, *args], cwd=str(PROJECT_DIR), capture_output=True,
                               text=True, timeout=30).stdout.strip()
     except Exception:
         return ""
