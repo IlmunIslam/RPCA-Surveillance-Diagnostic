@@ -131,9 +131,13 @@ python -u -m src.phase3_runner               # all 220 runs, arms in order
 python -u -m src.phase3_runner --arms clean-subset
 ```
 
-- **Launch detached** (section 1 above), then `watchdog_phase3.ps1`, also detached.
-  Both are `ask`-gated in `.claude/settings.json`, so each needs explicit approval.
+- **Launch detached** (section 1 above). **The SYSTEM Scheduled Task is the only
+  watchdog**; nothing else needs starting -- see "The only watchdog" below.
 - **Watch a run in progress** with `tail -f results/ssrtd_real/runs/<run>/worker.log`.
+  ⚠️ Safe for that file (Python writes it) but **never `tail -f`
+  `logs/watchdog_system.log`**: MSYS `tail` holds it in a share mode that silently
+  blocks PowerShell's `Add-Content`, so the watchdog's own lines vanish while it
+  keeps working (`RESEARCH_LOG.md` §18). Read it with `Get-Content -Tail` instead.
   The runner's own log is `logs/phase3_runner.log`; failures land in
   `logs/phase3_errors.log` with the worker log tail attached.
 - **Never two writers.** `results/ssrtd_real/runner.lock` holds the live pid; a second
@@ -227,12 +231,21 @@ The lesson is not "test more", it is **the untested line is the one that runs wh
 everything else has already gone wrong** -- an installer, a relaunch, a disk guard. Each
 of those only executes in a failure, which is exactly when nobody is watching.
 
-### The logoff-proof watchdog (2026-10-21)
+### The only watchdog (retired the second one, 2026-11-03)
 
-`watchdog_phase3.ps1` is a user-session process and **dies in a logoff**, which is
-what cost 18 idle hours on 2026-10-20 (`RESEARCH_LOG.md` §13). Use
-`watchdog_system.ps1` via a SYSTEM Scheduled Task instead; keep the old one only for
-watching a run in the foreground.
+**`watchdog_system.ps1`, run by the SYSTEM Scheduled Task `Phase3BatchWatchdog`, is
+the ONLY watchdog.** `watchdog_phase3.ps1` is **retired and deleted**; it stays in
+git history if ever wanted (`git show 6c2fd18:watchdog_phase3.ps1`).
+
+Why retired rather than maintained: it was a user-session process and **died in a
+logoff**, which is what cost 18 idle hours on 2026-10-20 and 10.5 days on 2026-10-23
+(`RESEARCH_LOG.md` §13, §17). The SYSTEM task does everything it did and survives
+logoff and reboot; its only advantage was a 60-second poll against 15 minutes, which
+is irrelevant for a multi-day unattended batch. The decisive argument: **two
+watchdogs is how the bare-python bug survived in one file after being fixed in the
+other** -- it sat in `watchdog_phase3.ps1:104` for days after `watchdog_system.ps1`
+was repaired, working only because a human always started it (author's decision,
+2026-11-03). `watchdog_param_sweep.ps1` stays untouched: baseline-era and unused.
 
 ```powershell
 # install (MUST be an elevated PowerShell -- a SYSTEM task needs admin)
