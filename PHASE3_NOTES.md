@@ -187,9 +187,9 @@ anything else in that position, 2026-11-02:
 |---|---|
 | `install_watchdog_task.ps1` | **was** untested; now verified end-to-end (quoting, execution, exit code) |
 | `--retry-failed` in `phase3_runner.py` | **was dead code** -- declared, documented, and never read in the body. Harmless only because resume keys on the CSV, so a failed run is already pending. Now documented as an accepted no-op rather than left looking like a safety net. |
-| the **relaunch branch** of `watchdog_system.ps1` (its `Start-Process`) | still unexercised -- everything around it is tested, but the launch itself has never fired. It gets its first real exercise the first time the SYSTEM task relaunches the batch, and `logs/watchdog_system.log` plus a growing row count are the proof. Its `Start-Process` pattern is the one already proven by hand. |
-| the `STOP_BATCH` branch of `watchdog_phase3.ps1` | unexercised -- added 2026-10-22; the sentinel has never existed while that watchdog was running. |
-| the runner's disk-guard `STOPPING` branch | logic verified 2026-10-18 (§9.1) but never fired against a real full disk. |
+| the **relaunch branch** of `watchdog_system.ps1` (its `Start-Process`) | **FAILED on first execution, 2026-11-03** -- bare `python` is not on SYSTEM's PATH, and it logged a success it had not achieved (RESEARCH_LOG §16). Fixed and re-verified under the user account (runner pid 2452). Still **not** proven under SYSTEM: that needs the task re-registered and a kill test. |
+| the `STOP_BATCH` branch of `watchdog_phase3.ps1` | ✅ **verified 2026-11-03**: with the sentinel present it logged "STOP_BATCH present - not relaunching" and did not relaunch; on removal, "STOP_BATCH removed - watching again" at the next poll. Each logged once, and the live runner was untouched. |
+| the runner's disk-guard `STOPPING` branch | still unexercised, and **not cheaply testable**: it needs either ~15 GB of real disk consumed or an injectable threshold. A second runner cannot reach the guard while a batch is live, because `acquire_lock()` refuses first. The fix, when convenient, is a `--min-free-gb` override so the branch can be fired on demand; until then this is a known-untested path. |
 
 The lesson is not "test more", it is **the untested line is the one that runs when
 everything else has already gone wrong** -- an installer, a relaunch, a disk guard. Each
