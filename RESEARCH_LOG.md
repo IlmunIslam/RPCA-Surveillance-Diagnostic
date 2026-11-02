@@ -1328,6 +1328,65 @@ three have low `E` occupancy at factor 1.0 (0.49%, 0.15%, 0.25%), where doubling
 threshold removes comparatively little.
 
 
+## 15. PROVISIONAL — clean-rest at 54/160, 2026-11-02
+
+> ⚠️ **PROVISIONAL, 54 of 160 runs.** Flagged this way deliberately: the precision
+> claim of §12.2 was reported at n=11 and had to be withdrawn at n=20, so an interim
+> number is labelled before it can be quoted. **Supersede or confirm this section when
+> the arm completes.** The arm is in video_registry order, not random, so the 54 are
+> not a random sample of the 160 either.
+
+**Why this arm matters more than the three before it.** Everything to date rests on the
+**20 stratified videos** that the naive baseline's parameter sweep selected (§8).
+`clean-rest` is the other 160 -- videos never used for anything, chosen by nothing.
+
+### 15.1 Enrichment outside the subset behaves like inside it
+
+| | clean-subset (20) | clean-rest (54, provisional) |
+|---|---|---|
+| median enrichment | 40.4x | **38.1x** |
+| range | 2.4 - 199.8x | 14.1 - 118.8x |
+| enrichment > 1 | 20/20 | **54/54** |
+| vs `foreground_density` | rho **-0.731** (p~0.00025) | rho **-0.606** (p < 1e-5) |
+| log-log slope | -0.537 | -0.413 |
+| `foreground_density` span | 0.013 - 4.263% | 0.057 - 1.173% |
+
+**Median agrees within 6%, replication is 54/54, and the density dose-response holds
+on videos never used for anything else.** Pooled over all 74 clean factor-1.0 videos:
+median **39.7x**, **74/74** above 1, rho **-0.613** (p < 1e-6).
+
+**The narrower range is not a weaker effect, it is range restriction.** The subset
+spans a 328x density range because it was *stratified* to; the 54 span 21x. The
+subset's extremes (`video_165` at fg 0.013% -> 199.8x, `video_01` at 4.263% -> 2.4x)
+have no counterpart outside it simply because no such scenes are in these 54. The
+shallower log-log slope (-0.413 vs -0.537) is consistent with the same restriction and
+should not be read as a different mechanism.
+
+### 15.2 One honest difference, and its likely cause
+
+Restricting **both** groups to the 54's density band (0.057-1.173%) to remove the
+restriction confound:
+
+| | n | median enrichment |
+|---|---|---|
+| subset, within band | 14 | **45.7x** |
+| rest, within band | 54 | **38.1x** |
+
+Mann-Whitney **z = +2.02, p ~ 0.044**: the stratified 20 show *slightly higher*
+enrichment than comparable videos outside them. Read it as what it is -- **17% in the
+median, borderline significance at n = 14 vs 54, and one of several comparisons made
+on the same data**. The plausible cause is mild selection: those 20 were chosen for
+the *baseline's* purposes, which favoured scenes where the decomposition was
+interesting. It does **not** overturn anything -- direction and magnitude of the
+effect, and its dependence on density, are the same on both sides. But the
+manuscript's headline number should be the **pooled** figure, not the subset's, and
+this comparison should be re-run at 160.
+
+**Verdict: no material divergence.** Had the 54 come in near 1x, or with the density
+correlation absent, everything resting on the stratified 20 would have been in
+question. They did not.
+
+
 ## Verification provenance
 
 Facts above were checked with, and are reproducible via:
