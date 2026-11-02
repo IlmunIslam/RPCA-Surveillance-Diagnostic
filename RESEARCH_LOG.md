@@ -1387,6 +1387,67 @@ correlation absent, everything resting on the stratified 20 would have been in
 question. They did not.
 
 
+## 16. The logoff test: the task fired, the relaunch did not, 2026-11-03
+
+The author installed the SYSTEM task and performed the logoff/logon test. Result, in
+the order it matters:
+
+**The task fired.** Two real (non-dry) entries in `logs/watchdog_system.log` at
+00:07:31 and 00:08:30 -- both triggers, `AtStartup` and the 15-minute repetition --
+each reading "runner not running and batch incomplete (114/300) -- relaunching".
+So the Scheduled Task survives a logoff and runs the watchdog as SYSTEM, which is
+what it was built for.
+
+**The relaunch did not take.** Rows stayed at 114, `logs/phase3_runner.log` gained
+nothing, and `logs/phase3_runner.stdout.log` held the answer, twice:
+
+```
+'python' is not recognized as an internal or external command,
+```
+
+**Cause.** The interpreter is a **per-user** install
+(`C:\Users\ilmun\AppData\Local\Programs\Python\Python312\python.exe`) on the user's
+PATH. SYSTEM has neither that PATH nor a useful `$env:LOCALAPPDATA`, so bare `python`
+resolves to nothing. The machine PATH contains no Python at all.
+
+**ffmpeg was already safe** -- `src/compression.py` line 11 falls back to the absolute
+WinGet path when `shutil.which("ffmpeg")` fails. That earlier decision prevented a
+second, subtler failure in which the solve would have succeeded and every H.264 column
+come back empty under SYSTEM.
+
+### 16.1 Two defects, not one
+
+1. **Bare `python` in the relaunch.** Now resolved to an absolute path:
+   `$env:PHASE3_PYTHON`, else `Get-Command python` (which works when a human runs it),
+   else the known absolute path -- and `Test-Path`-guarded. The interpreter's directory
+   is prepended to the child's PATH as well.
+2. **The watchdog logged a success it had not achieved.** It wrote "relaunching" and
+   exited without checking, then counted the attempt as a relaunch. That is the
+   guardrail-that-reports-itself-active problem (ARCHIVE_BASELINE §7) reproduced inside
+   the watchdog's own log, and it is the worse of the two defects: the first cost 15
+   minutes, the second would have cost four silent relaunch attempts and then a
+   permanent give-up. It now polls up to 20 s for the runner process and logs either
+   `relaunch took: runner pid N` or `relaunch did NOT take after 20s` with the stdout
+   tail attached. A missing interpreter logs `nopython` and does **not** consume a
+   stall count, since retrying cannot help.
+
+### 16.2 What is proven, and what is not
+
+- **Proven by execution:** the task fires as SYSTEM after a logoff; the repaired
+  relaunch branch starts the runner and verifies it (runner pid 2452, worker on
+  `video_64`, 2026-11-03 00:13:50). The batch is running again after **10.5 days** idle.
+- **Not yet proven by execution:** that the *fallback* path resolves under SYSTEM
+  specifically. It is guarded by `Test-Path`, the path exists, and a failure now says
+  so instead of lying -- but the branch was run by the user, not by SYSTEM. The
+  conclusive test is to kill the runner and let the task relaunch it within 15 minutes,
+  at the cost of the in-progress run. **No reinstall is needed either way**: the task
+  invokes the script from disk, so the fix is live for the next firing.
+
+This is the third item from the "Committed but never run" audit (`PHASE3_NOTES.md`) to
+fail on its first real execution, after `install_watchdog_task.ps1` and
+`--retry-failed`. The audit predicted this branch specifically.
+
+
 ## Verification provenance
 
 Facts above were checked with, and are reproducible via:

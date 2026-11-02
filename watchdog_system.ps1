@@ -148,9 +148,55 @@ if ($DryRun) {
     exit 0
 }
 
-Log "runner not running and batch incomplete ($rows/$target) -- relaunching (#$($relaunches + 1))"
+# Resolve python to an ABSOLUTE path. Under SYSTEM, bare "python" is not found:
+# this machine's interpreter is a per-user install on ilmun's PATH, and SYSTEM has
+# neither that PATH nor a useful $env:LOCALAPPDATA. The first real firing of this
+# branch (2026-11-03 00:07) logged "relaunching" twice while cmd answered
+# "'python' is not recognized" -- see RESEARCH_LOG.md section 16.
+# ffmpeg needs no equivalent: src/compression.py already falls back to its absolute
+# WinGet path when shutil.which fails.
+$pythonExe = $env:PHASE3_PYTHON
+if (-not $pythonExe) {
+    $pythonExe = (Get-Command python -ErrorAction SilentlyContinue).Source   # as the user
+}
+if (-not $pythonExe) {
+    $pythonExe = "C:\Users\ilmun\AppData\Local\Programs\Python\Python312\python.exe"
+}
+if (-not (Test-Path -LiteralPath $pythonExe)) {
+    # Do NOT claim a relaunch we cannot perform, and do not burn a stall count on it.
+    $lastLog = Log-State "nopython" ("cannot relaunch: no python at '$pythonExe'. Set " +
+        "PHASE3_PYTHON to the interpreter's full path, then delete " +
+        "logs\watchdog_state.json.") $prev
+    Write-State "nopython" $rows $prev.relaunches $lastLog
+    exit 1
+}
+
+# Give the child the interpreter's own directory on PATH too, so anything inside the
+# batch that shells out to "python" resolves the same one.
+$env:PATH = (Split-Path $pythonExe) + ";" + $env:PATH
+
+Log "runner not running and batch incomplete ($rows/$target) -- relaunching (#$($relaunches + 1)) with $pythonExe"
 Start-Process -FilePath cmd.exe `
-  -ArgumentList '/c', 'python -u -m src.phase3_runner >> logs\phase3_runner.stdout.log 2>&1' `
+  -ArgumentList '/c', "`"$pythonExe`" -u -m src.phase3_runner >> logs\phase3_runner.stdout.log 2>&1" `
   -WorkingDirectory $proj -WindowStyle Hidden
-Write-State "relaunched" $rows $relaunches (Get-Date).ToString('o')
-exit 0
+
+# Verify the relaunch actually took. A watchdog that logs a success it did not achieve
+# is the guardrail-that-reports-itself-active problem in its own log.
+$started = $null
+for ($i = 0; $i -lt 10; $i++) {
+    Start-Sleep -Seconds 2
+    $started = Get-Proc 'src\.phase3_runner'
+    if ($started) { break }
+}
+if ($started) {
+    Log "relaunch took: runner pid $($started.ProcessId)"
+    Write-State "relaunched" $rows $relaunches (Get-Date).ToString('o')
+    exit 0
+}
+
+$tail = ""
+$outLog = Join-Path $proj "logs\phase3_runner.stdout.log"
+if (Test-Path $outLog) { $tail = (Get-Content $outLog -Tail 3) -join " / " }
+Log "relaunch did NOT take after 20s -- stdout tail: $tail"
+Write-State "launchfail" $rows ($relaunches + 1) (Get-Date).ToString('o')
+exit 1
