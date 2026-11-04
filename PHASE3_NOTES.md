@@ -154,6 +154,26 @@ python -u -m src.phase3_runner --arms clean-subset
   environment of every runner start and appends rather than overwrites, so a numpy
   or OS change mid-batch stays visible (`RESEARCH_LOG.md` §6.6 for why).
 
+### Monitoring a long batch leaks `tail` processes
+
+Watching `logs/phase3_runner.log` with a 30-minute `tail -f` watcher, re-armed each
+time it expired, left **one orphaned `tail` per cycle: 40 had accumulated by
+2026-11-03** before they were noticed and killed. **A stopped monitor can orphan its
+`tail`** -- stopping the watcher ends its shell but not necessarily the `tail` it
+spawned, so check for strays and kill them rather than assuming the stop cleaned up:
+
+```powershell
+Get-Process tail -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.Id -Force }
+```
+
+This is not cosmetic. It is the **same leak** that silently blocked the watchdog's
+`Add-Content` writes on 2026-11-03: an orphaned `tail` holds a Windows file in a share
+mode that blocks PowerShell appends, so two real watchdog firings wrote state but no
+log line (`RESEARCH_LOG.md` §18). A future session re-running the same
+watch-and-re-arm loop would rebuild the leak, so prefer **periodic spot-checks of the
+row count** over a continuous tail for a multi-day batch, and never tail a log that
+PowerShell writes.
+
 ### Checks that report confidently while structurally blind
 
 Four instances in this project, in different clothes each time. The common shape:
@@ -230,6 +250,24 @@ anything else in that position, 2026-11-02:
 The lesson is not "test more", it is **the untested line is the one that runs when
 everything else has already gone wrong** -- an installer, a relaunch, a disk guard. Each
 of those only executes in a failure, which is exactly when nobody is watching.
+
+### PENDING at the clean-rest boundary (author's instruction, 2026-11-04)
+
+`clean-rest` will land at **159 / 160**, not 160: `video_87` timed out on 2026-11-03
+(§13-style memory pressure, `RESEARCH_LOG.md` §17 era) and the runner had already
+moved past it in this pass's plan, so it is still pending and this pass will not
+retry it.
+
+**Do ONE restart at the boundary** -- kill the runner (SYSTEM-owned, needs an elevated
+shell) and let the SYSTEM task relaunch it. Resume re-queues `video_87` automatically;
+`--retry-failed` is the documented no-op. Then the arm analysis is on the full 160.
+
+**Then report the full-arm result** and compare against the subset (median enrichment
+**40.4x**, range **2.4-199.8x**) and against the PROVISIONAL §15 figures at n=54
+(median **38.1x**, rho **-0.606**): median and range, the density dose-response, and
+whether §15 holds at n=160. **If it diverges, say so plainly and supersede §15**
+rather than quietly editing it -- the same discipline as the withdrawn precision claim
+of §12.2.
 
 ### The only watchdog (retired the second one, 2026-11-03)
 

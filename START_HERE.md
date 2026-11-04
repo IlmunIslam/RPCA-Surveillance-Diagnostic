@@ -87,6 +87,18 @@ framing; they are listed in that section, flagged and not yet rewritten.
 
 ## The exact next step
 
+**The batch is running unattended** (191/300 as of 2026-11-04 14:10; `clean-rest`
+131/160, the 80-run λ sweep not yet started). Two things are queued:
+
+1. **At the `clean-rest` boundary, do ONE restart** so `video_87` -- which timed out
+   on 2026-11-03 and was passed over in this pass's plan -- is recomputed, making the
+   arm 160/160 instead of 159/160. See `PHASE3_NOTES.md`, "PENDING at the clean-rest
+   boundary", which also says what to report.
+2. **Then the λ sweep runs itself** (80 runs, `RESEARCH_LOG.md` §11).
+
+The original launch instructions below remain correct for a cold start.
+
+
 **Relaunch the batch: 186 runs pending** (106 of `clean-rest`, then the 80-run λ
 sweep). ~81 h of compute if the machine does not page.
 
