@@ -1328,7 +1328,12 @@ three have low `E` occupancy at factor 1.0 (0.49%, 0.15%, 0.25%), where doubling
 threshold removes comparatively little.
 
 
-## 15. PROVISIONAL — clean-rest at 54/160, 2026-11-02
+## 15. ~~PROVISIONAL — clean-rest at 54/160~~ — **SUPERSEDED BY §19**, 2026-11-05
+
+> 🛑 **SUPERSEDED.** The arm completed at 160/160 on 2026-11-05 and three of this
+> section's numbers moved materially; §15.2's sub-finding is **withdrawn**. Read §19
+> instead. This section is kept unedited as the record of what was believed at n=54,
+> because it was reported to the author as provisional and acted on.
 
 > ⚠️ **PROVISIONAL, 54 of 160 runs.** Flagged this way deliberately: the precision
 > claim of §12.2 was reported at n=11 and had to be withdrawn at n=20, so an interim
@@ -1566,6 +1571,70 @@ writes**, because `environment()` is captured once at start. One more restart is
 for the remaining 186 rows to carry provenance -- the author's call, weighed against
 leaving the batch undisturbed.
 
+
+## 19. clean-rest COMPLETE at 160/160 — supersedes §15, 2026-11-05
+
+`video_87`, the one run lost to a timeout on 2026-11-03, was recomputed after a single
+restart (85.8 min, almost all of it a 53-minute Modern Standby suspension) and the arm
+closed at **160/160**. These are the 160 videos **outside** the stratified subset --
+never used for the baseline, the sweep, or anything else.
+
+### 19.1 The finding holds, and is stronger than the subset suggested
+
+| | clean-subset (20, stratified) | **clean-rest (160)** | §15 at n=54 |
+|---|---|---|---|
+| median enrichment | 40.4x | **49.0x** | 38.1x |
+| range | 2.4 - 199.8x | **12.0 - 453.3x** | 14.1 - 118.8x |
+| enrichment > 1 | 20/20 | **160/160** | 54/54 |
+| vs `foreground_density` | rho -0.731 (p~2.5e-04) | **rho -0.469 (p~4.1e-10)** | rho -0.606 |
+| log-log slope | -0.537 | **-0.517** | -0.413 |
+| `foreground_density` span | 0.013 - 4.263% | 0.021 - 1.326% | 0.057 - 1.173% |
+
+**Pooled over all 180 clean factor-1.0 videos: median 47.4x, range 2.4 - 453.3x,
+180/180 above 1, rho -0.508 (p ~ 3.3e-13).** That is the headline pair of numbers for
+the manuscript: **every video in the dataset shows the effect**, and it weakens
+monotonically with scene occupancy.
+
+The **log-log slope is the strongest cross-group agreement**: -0.517 on the 160 against
+-0.537 on the stratified 20. The *rate* at which enrichment decays with density is the
+same in both groups; only the sampled range differs, which is what a real mechanism
+looks like.
+
+### 19.2 What changed from §15, stated plainly
+
+Three numbers moved and one sub-finding is withdrawn:
+
+1. **Median 38.1x -> 49.0x (+29%).** The n=54 sample was the arm's *first* 54 videos in
+   registry order, not a random 54. The near-empty scenes that produce the highest
+   enrichment (`video_169` fg 0.025% -> **453.3x**, `video_170` 0.042% -> 371.5x,
+   `video_162` 0.075% -> 366.1x) sit later in the registry and were all absent at n=54.
+   §15 flagged the ordering caveat; this is that caveat coming true.
+2. **Maximum 118.8x -> 453.3x.** §15 argued the narrower range was *range restriction*
+   rather than a weaker effect. **Confirmed**: with the full arm reaching down to fg
+   0.021%, the maximum nearly quadrupled.
+3. **rho -0.606 -> -0.469, but p 1e-5 -> 4e-10.** The coefficient fell while the
+   evidence strengthened by five orders of magnitude -- a wider, denser sample with more
+   scatter at the sparse end. The slope, which is the scale-free statement, barely moved.
+4. **§15.2 is WITHDRAWN.** It recorded that the stratified 20 ran ~17% higher than
+   comparable videos outside them (45.7x vs 38.1x, Mann-Whitney p ~ 0.044, n = 14 vs
+   54), with mild selection as the suspected cause. At full n the comparison is
+   **45.7x vs 49.0x, z = -0.11, p = 0.916 -- no detectable difference, and the sign is
+   reversed.** The borderline result was noise, exactly as §15's own hedge allowed
+   ("borderline significance ... one of several comparisons made on the same data").
+   **There is no selection effect to disclose**, and the manuscript needs no caveat
+   about the subset being unrepresentative of enrichment.
+
+### 19.3 What this settles
+
+Everything up to §14 rested on 20 videos chosen for the *baseline's* purposes. The
+worry was that the finding was an artifact of that selection. It is not: on 160 videos
+selected by nothing, the effect is **larger** (49.0x vs 40.4x), **universal** (160/160),
+and decays with density at the **same rate** (-0.517 vs -0.537). The headline figure
+should be the pooled **47.4x over 180 videos** with the per-video range, never the
+subset's alone.
+
+Still open: the lambda sweep (§11), running now -- whether the effect survives the
+method's only parameter.
 
 ## Verification provenance
 

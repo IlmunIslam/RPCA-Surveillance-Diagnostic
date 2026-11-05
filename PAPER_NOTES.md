@@ -437,10 +437,19 @@ It is the wrong description of the *contribution*.
    two existing CSV columns (`SE_overlap_005 / E_gt005_pct`), so it is computed at
    analysis time and no column was added mid-batch.
 
-   **IT REPLICATES ACROSS 20 VIDEOS — and `video_01` is the weakest case**
-   (clean-subset checkpoint, `RESEARCH_LOG.md` §10). Enrichment exceeds 1 on
-   **20 of 20** videos, **median 40.4x**, range **2.4x–199.8x**; the 2x2 odds ratio
-   agrees (median 94x). **`video_01`'s 2.4x is the lowest of the twenty**, because its
+   **IT REPLICATES ACROSS ALL 180 VIDEOS** (`RESEARCH_LOG.md` §10, §19 — the latter
+   supersedes the provisional §15). **Enrichment exceeds 1 on 180 of 180 clean
+   videos, pooled median 47.4x, range 2.4x–453.3x**, Spearman **−0.508** against
+   `foreground_density` (p ~ 3.3e-13). Quote those two numbers, not the subset's.
+   Broken out: the 20 stratified videos give median 40.4x (range 2.4–199.8x, rho
+   −0.731, log-log slope −0.537); the **160 videos selected by nothing** give median
+   **49.0x** (range 12.0–453.3x, rho −0.469, slope **−0.517**). The decay *rate* is
+   the same in both groups, which is the cross-group consistency worth reporting; and
+   **the effect is larger outside the subset**, so selection cannot explain it. There
+   is **no selection effect to disclose** — the ~17% subset-vs-rest gap recorded at
+   n=54 vanished at full n (p = 0.916, sign reversed) and is withdrawn (§19.2).
+   `video_01` remains the **weakest case** (2.4x). The 2x2 odds ratio agrees on the
+   subset (median 94x). **`video_01`'s 2.4x is the lowest of the twenty**, because its
    scene is far busier than typical (`foreground_density` 4.263% against a subset
    median of 0.403%). So every percentage quoted above is **one busy video's**, and it
    **understates** the effect: label them as such, give the subset median and range
