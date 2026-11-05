@@ -54,7 +54,11 @@ SMOKE_DIR = PROJECT_DIR / "results" / "scratch" / "phase3_smoke"
 
 LAM = 0.4                 # RESEARCH_LOG.md section 8: one lambda for every arm
 SWEEP_LAMS = (0.2, 0.6, 0.8, 1.0)   # section 11: with LAM this is {.2,.4,.6,.8,1}
-TIMEOUT_S = 3600          # ~2.5x the measured 22 min ADMM + 2 min H.264
+TIMEOUT_S = 7200          # raised from 3600 on 2026-11-05: at 3600 a run lost to
+                          # memory pressure was killed (video_87, §17 era) while a
+                          # suspended run overran it unkilled anyway, since parent
+                          # and child freeze together. 7200 absorbs both and costs
+                          # nothing on a normal ~24 min run.
 # Runs that also keep the full float32 L/S/E (160 MB per run compressed). Chosen as
 # the sweep subset's density extremes plus its busiest scene, which is what the
 # Phase 5 figures need (RESEARCH_PLAN.md figures 2 and 5: a decomposition example and
