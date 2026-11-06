@@ -54,6 +54,14 @@ SMOKE_DIR = PROJECT_DIR / "results" / "scratch" / "phase3_smoke"
 
 LAM = 0.4                 # RESEARCH_LOG.md section 8: one lambda for every arm
 SWEEP_LAMS = (0.2, 0.6, 0.8, 1.0)   # section 11: with LAM this is {.2,.4,.6,.8,1}
+
+# Section 21, the pre-registered test. One lambda only, deliberately: the noise arm
+# at LAM already exists for all 20 videos, so lambda 1.0 completes a paired
+# 0.4 -> 1.0 slope at half the cost of both extremes, and the sem of that paired
+# statistic is 17-21% of the mean for every segment, so a second extreme would buy
+# curvature rather than power. 0.2 is held in reserve for section 21.4's ambiguous
+# band -- add it here only if that band is hit.
+NOISE_SWEEP_LAMS = (1.0,)
 TIMEOUT_S = 7200          # raised from 3600 on 2026-11-05: at 3600 a run lost to
                           # memory pressure was killed (video_87, §17 era) while a
                           # suspended run overran it unkilled anyway, since parent
@@ -281,6 +289,11 @@ def build_plan(arms=None, smoke=False):
     # that an interrupted arm still leaves whole lambda points rather than fragments.
     for lam in SWEEP_LAMS:
         spec.append(("lambda-sweep", sub, "clean", 1.0, lam, 0))
+    # Section 21: the same subset under impulse noise at the far lambda, to test the
+    # pre-registered prediction against the "E only claims edges because it is idle"
+    # rival. Runs after the clean sweep so the clean reference is complete first.
+    for lam in NOISE_SWEEP_LAMS:
+        spec.append(("noise-sweep", sub, "impulse10", 1.0, lam, 0))
     plan = []
     for arm, vids, cond, factor, lam, seed in spec:
         if arms and arm not in arms:
