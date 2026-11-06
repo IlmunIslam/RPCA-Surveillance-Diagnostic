@@ -413,6 +413,35 @@ It is the wrong description of the *contribution*.
    which is 1.0 if the two supports are independent. On `video_01` clean:
    12.672% / 5.248% = **2.42x**. That is the number that makes this a finding.
 
+   ⚠️ **ALWAYS QUOTE THE THRESHOLD WITH IT. The enrichment *level* is strongly
+   threshold-dependent** (`RESEARCH_LOG.md` §20.7b, measured at `lambda = 0.4` over
+   the 20 subset videos):
+
+   | measurement threshold | `S>thr%` | `E>thr%` | raw `P(E\|S)%` | enrichment |
+   |---|---|---|---|---|
+   | 0.01 | 1.8424 | 7.4681 | **36.20** | **4.7x** |
+   | 0.05 | 0.4526 | 0.8030 | **31.31** | **40.4x** |
+
+   A 5x threshold change moves enrichment **10.05x** while the raw share moves
+   **0.75x** — so under a *measurement-threshold* change the raw share is the more
+   stable of the two, and enrichment is the fragile one. The cause is in the columns:
+   enrichment rises almost entirely because the denominator `P(E)` collapses
+   (7.47% → 0.80%), not because the conditional overlap strengthens (36.2% → 31.3%,
+   which *falls*). Therefore: **the 47.4x headline is a threshold-0.05 figure, not a
+   scale-free effect size** — give the 0.01 value (4.7x) beside it. The *sign* of the
+   finding is threshold-independent (far above 1 at both), so only the magnitude is
+   threshold-specific.
+
+   This does **not** contradict the `factor` result below (raw share 2.16x more
+   sensitive than enrichment): that perturbs `E`'s own soft-threshold *inside* the
+   ADMM, a different thing from the cut applied to the output afterwards. Both stand.
+   What was wrong was generalising it into "enrichment is the robust statistic".
+   Enrichment is robust to `factor`, to the noise condition and to `lambda`, and
+   **fragile to the measurement threshold** — state that scope. What is threshold-robust
+   is enrichment's **`lambda`-slope** (1.240x at 0.01 vs 1.290x at 0.05, a 4% difference
+   across a 5x threshold change), which is why `RESEARCH_LOG.md` §21 pre-registers the
+   slope rather than the level.
+
    **The noise condition decomposes it, and confirms the mechanism** (same video,
    10% random-valued impulse, seed 0, corrupted fraction exactly 10.000%; computed
    from the run's own saved `supports.npz` and `noise_mask.npz`):
@@ -485,8 +514,13 @@ It is the wrong description of the *contribution*.
    Report the two component columns beside the ratio, because they carry the
    mechanism: raising `lambda` does not remove the shared structure, it **transfers**
    it. On the 17-video balanced panel, `S`'s claimed voxels fall 6.1x (154,667 →
-   25,231) while `E`'s share rises 2.8x (0.447% → 1.232%) and their **sum is nearly
-   conserved** (209,556 → 254,853). `S` is penalised out of the background edges and
+   25,231) while `E`'s share rises 2.8x (0.447% → 1.232%). ⚠️ **`E` gains about
+   twice what `S` loses** — not one-for-one. An earlier draft of this item said the
+   sum was "nearly conserved"; that was a median of per-video sums and is
+   **withdrawn** (`RESEARCH_LOG.md` §20.7a): per video the sum rises 1.257x median
+   and only 2 of 20 videos are within ±10% of conserved, while the transfer
+   coefficient `dE/(-dS)` has a 0.2–12.5 per-video spread and must not be quoted as a
+   characteristic number. `S` is penalised out of the background edges and
    `E` takes them over — on clean input, where `E` has no noise to represent. **This
    is the misfit-sink claim measured as a dose-response in the model's own
    parameter**, and it is the strongest single piece of evidence for the paper's

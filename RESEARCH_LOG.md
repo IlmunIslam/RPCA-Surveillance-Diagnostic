@@ -1669,9 +1669,17 @@ every lambda:
 
 - `S` retreats: median claimed voxels **154,667 -> 25,231** (6.1x fewer);
 - `E` expands: median `E>.05%` **0.447 -> 1.232** (2.8x more);
-- their sum is nearly conserved: **209,556 -> 254,853** claimed voxels in total.
+- ~~their sum is nearly conserved: **209,556 -> 254,853** claimed voxels in total.~~
+  **CORRECTED 2026-11-07, see 20.7: the sum is NOT conserved.** That figure is a
+  median of per-video sums, and +21.6% should not have been called "nearly
+  conserved". Per video the sum rises median **1.257x** (range 0.27-1.56x) and only
+  **2 of 20** videos are within +/-10% of conserved. The transfer coefficient
+  tau = dE_rate / (-dS_rate) has median **1.8-2.7** depending on the segment, with a
+  per-video spread of **0.2-12.5**: `E` gains roughly **twice** what `S` loses.
 
-So raising lambda does not remove the shared structure, it **transfers** it. The
+So raising lambda does not remove the shared structure, it **transfers** it -- and
+`E`'s expansion *exceeds* `S`'s retreat by about 2x, so the total claimed support
+grows rather than being handed over one-for-one. The
 sparse term is penalised out of the edges and the noise term takes them over --
 on clean input, where there is no noise for `E` to represent. That is the
 misfit-sink claim measured as a dose-response in the model's own parameter, which
@@ -1753,6 +1761,185 @@ not because lambda might overturn the effect (it does not), but because 20.2 pre
 that on *noisy* input the transfer should be weaker, since `E` there has real noise to
 account for and less capacity to absorb edges. That is a falsifiable prediction the
 sweep itself generated. 40 runs, ~17 h. Author's call.
+
+### 20.7 CORRECTION to 20.2, and a threshold finding that changes how the headline is quoted, 2026-11-07
+
+Both found while building the pre-registration in §21, from the bit-packed
+`supports.npz` already stored for all 300 runs. No new compute.
+
+**(a) "Their sum is nearly conserved" was wrong.** Withdrawn, per the standing rule
+that anything reported which does not survive goes in the record as withdrawn.
+Per-video, the sum `S_rate + E_rate` rises **1.257x** median (0.27-1.56x) from
+lambda 0.2 to 1.0, with **2 of 20** videos within +/-10% of conserved. Per-segment
+transfer coefficients tau = dE_rate / (-dS_rate), per video:
+
+| segment | tau median | tau mean | sd | range | tau in [0.7, 1.3] |
+|---|---|---|---|---|---|
+| 0.2 -> 0.4 | 1.968 | 2.551 | 1.914 | 0.21-8.92 | 2/20 |
+| 0.4 -> 0.6 | 2.712 | 3.145 | 2.426 | 0.19-11.89 | 2/20 |
+| 0.4 -> 1.0 | 1.830 | 2.390 | 1.994 | 0.25-8.92 | 4/20 |
+| 0.2 -> 1.0 | 1.913 | 2.210 | 1.763 | 0.23-8.92 | 2/20 |
+
+The right statement is **`E` gains about twice what `S` loses**, not one-for-one. The
+conclusion is unchanged and arguably stronger -- `E`'s growth is driven by, and
+overshoots, `S`'s retreat -- but "conservation" implied a zero-sum handoff that the
+data do not show, and tau's spread (0.2 to 12.5) is far too wide to quote a
+per-video transfer coefficient as a characteristic number at all.
+
+**(b) The enrichment LEVEL is strongly threshold-dependent, and the raw share is the
+more stable of the two under a measurement-threshold change.** This is the opposite
+of the generalisation `PAPER_NOTES` item 18 had drifted into. Measured at lambda 0.4
+over the 20 subset videos:
+
+| threshold | `S>thr%` | `E>thr%` | raw `P(E|S)%` | enrichment |
+|---|---|---|---|---|
+| 0.01 | 1.8424 | 7.4681 | **36.20** | **4.7x** |
+| 0.05 | 0.4526 | 0.8030 | **31.31** | **40.4x** |
+
+A 5x threshold change moves enrichment **10.05x** and the raw share **0.75x**. The
+cause is visible in the columns: enrichment rose almost entirely because the
+*denominator* `P(E)` collapsed (7.47% -> 0.80%), not because the conditional overlap
+strengthened (36.2% -> 31.3%, which actually *fell*).
+
+Consequences, all of which belong in the manuscript:
+- **The 47.4x headline is a threshold-0.05 number, not a scale-free effect size.**
+  Quote the threshold with it, every time, and give the 0.01 value (4.7x) beside it.
+- The sign of the finding is threshold-independent: enrichment is far above 1 at both
+  thresholds, so "`S`-membership predicts `E`-membership well above chance" stands.
+  Only the magnitude is threshold-specific.
+- This does **not** contradict §14's "raw share 2.16x more sensitive than enrichment".
+  That measured the solver's `factor` parameter (`E`'s own soft-threshold inside the
+  ADMM), a different perturbation from the measurement cut applied afterwards. Both
+  results stand; the error was generalising §14 into "enrichment is the robust
+  statistic". It is robust to `factor`, to the noise condition and to lambda, and
+  **fragile to the measurement threshold.** State the scope.
+- What *is* threshold-robust is the **lambda-slope** of enrichment (1.240x at 0.01
+  against 1.290x at 0.05 -- a 4% difference across a 5x threshold change). That is
+  why §21 pre-registers the slope and not the level.
+
+## 21. PRE-REGISTERED PREDICTION: the lambda-slope of enrichment under noise, 2026-11-06 23:52 UTC
+
+**Written and committed BEFORE any `impulse10` run at lambda != 0.4 exists.** The git
+commit carrying this section is the timestamp; `results/metrics/ssrtd_real_results.csv`
+at that commit contains 300 rows, of which the only `impulse10` rows are the 20 of
+`noise-subset` at lambda 0.4. Author's instruction, 2026-11-07: state it precisely
+enough to be falsified, or skip the arm, because "a robustness check dressed as a
+prediction is worse than no prediction."
+
+### 21.1 Why the prediction in §20.6 was not falsifiable as written
+
+§20.6 said the transfer "should be weaker on noisy input". That is not a statable
+prediction, for the reason the author gave: at lambda 0.4 both conditions already
+exist and §12 found them nearly identical -- clean 40.4x against noise 41.9x on
+uncorrupted voxels, rank correlation +0.994. **The level is not damped by noise at
+that point.** Any prediction must therefore be about the *slope* in lambda, not the
+level. §20.6's wording is withdrawn.
+
+### 21.2 The confound that had to be ruled out first, and why it is now bounded
+
+`E`'s soft-threshold is `factor / beta_X`, and `beta_X_final` is **0.652x** under
+noise (per-video median; range 0.245-1.305), so `E`'s effective threshold runs about
+**1.53x higher** under noise, and up to 4x higher on individual videos.
+
+This matters more than it looks: a higher threshold *reduces* `E`'s claimed count,
+which **pushes any transfer statistic in the same direction the rival hypothesis
+predicts.** A test built on tau (§20.7a) would therefore have been uninterpretable --
+a low tau under noise could not be told apart from a stricter threshold. That is
+exactly the "robustness check dressed as a prediction" failure, and it is why tau is
+*not* the registered statistic.
+
+The registered statistic was chosen because it is empirically threshold-invariant.
+Across a **5x** measurement-threshold change on clean data, the paired lambda-slope
+moves **4%**:
+
+| threshold | paired lambda 0.4 -> 1.0 enrichment ratio | n | videos rising |
+|---|---|---|---|
+| 0.01 | **1.240x** median, geometric mean 1.267x (95% CI 1.141-1.407) | 20 | 17/20 (sign test p 2.6e-03) |
+| 0.05 | **1.290x** median, geometric mean 1.424x (95% CI 1.202-1.687) | 17 | 16/17 (sign test p 2.7e-04) |
+
+A 1.53x threshold shift is far smaller than the 5x that moves this by 4%, so the
+`beta_X` difference **cannot** manufacture the rival's predicted collapse. The
+confound is bounded, not assumed away.
+
+### 21.3 The two hypotheses, which make opposite predictions
+
+- **H1 (the paper's mechanism).** `E` is a misfit sink: it absorbs the background
+  edge structure `S` gives up as lambda rises. `E`'s update is an elementwise
+  soft-threshold and the impulse noise is spatially independent of `S`'s support
+  (§12: enrichment 0.99x on corrupted voxels), so `E`'s noise work and its
+  edge-absorption do not compete. **The lambda-slope should be preserved under noise.**
+- **H0 (the rival, and the most likely reviewer objection).** `E` claims edges only
+  because, on clean input, it has nothing else to do. Give it real noise -- 10% of
+  voxels, against an edge claim of under 1% -- and it is occupied, so `S`'s retreat
+  should *not* increase their coincidence. **The lambda-slope should vanish.**
+
+### 21.4 The registered prediction
+
+Arm: `noise-sweep`, `impulse10`, seed 0, `factor = 1.0`, **lambda = 1.0**, the same 20
+stratified videos, 20 runs. Joined to the existing `noise-subset` (lambda 0.4) for a
+paired within-video comparison on the **0.4 -> 1.0** segment -- the same segment
+§20.2's claim rests on.
+
+Measured on **uncorrupted voxels only**, by intersecting each run's `supports.npz`
+with its `noise_mask.npz` (both already saved for every noise run, so no new
+instrumentation). Primary threshold **0.01**, because no video's `S` is annihilated
+there (n = 20 guaranteed); secondary **0.05**, where 3 of 20 annihilate on clean and
+n may fall to ~17.
+
+**H1 predicts** the paired lambda 0.4 -> 1.0 enrichment ratio, at threshold 0.01 on
+uncorrupted voxels:
+
+> geometric mean **>= 1.15x**, with **>= 16 of 20** videos rising
+> (sign test p < 0.05).
+
+**H0 predicts** a ratio near **1.0x** with about **10 of 20** rising, not significant.
+
+**Falsification of H1, decided in advance:**
+
+| outcome at threshold 0.01 | reading |
+|---|---|
+| >= 16/20 rise **and** geometric mean >= 1.15x | H1 holds, H0 refuted |
+| <= 14/20 rise (sign test p > 0.05) **or** geometric mean < 1.10x | **H1 FALSIFIED.** `E`'s absorption is capacity-limited; the clean finding is partly an idleness artifact and the paper's central claim must be narrowed to clean input. |
+| 15/20 rise, or geometric mean in [1.10, 1.15) | **ambiguous** -- escalate to lambda 0.2 (20 more runs) rather than interpret |
+
+The boundary is sharp because the sign test at n = 20 gives p = 0.012 at 16/20 and
+p = 0.115 at 14/20. Secondary readout at threshold 0.05 is reported but does not
+decide, since its n depends on annihilation.
+
+### 21.5 What this test can and cannot do -- stated before seeing the data
+
+- **It is a registered null for H1.** H1 predicts sameness; the informative outcome is
+  refuting H0. That is weaker than predicting a novel effect, and it is said plainly
+  rather than dressed up. It is worth running anyway because H0 *is* the standing
+  objection to the paper's central claim, and §12 set the precedent that measuring
+  sameness here is informative.
+- **It is powered to separate "preserved" from "abolished", not "preserved" from
+  "slightly damped".** At n = 20 the per-segment sem is 17-21% of the mean, so a
+  genuine attenuation of ~20% would not be detected. H0 predicts abolition, which is
+  well inside the test's reach; a subtle damping is not, and no claim will be made
+  about one.
+- **A null result does not prove the mechanism**, only that this particular rival
+  fails. The remaining untested alternative stays untested: enrichment inside versus
+  outside the annotation boxes (§10.3), which needs ground-truth boxes, not more runs.
+
+### 21.6 Design: lambda = 1.0 only, 20 runs, not 40
+
+The author asked whether lambda 0.2 and 1.0 are the right two points or whether the
+existing 0.4 plus one extreme would do at half cost. **Half cost is right.**
+
+- A slope needs two points and lambda 0.4 under noise **already exists** with full
+  `supports.npz` and `noise_mask.npz` for all 20 videos.
+- Precision is flat across segments -- the sem of the paired statistic is 17-21% of
+  the mean for every lambda pair tested (§20.7a) -- so a second extreme buys
+  **curvature, not power**, and the prediction is about neither.
+- lambda = 1.0 is the larger lever from 0.4 (median dS_rate 0.145% against 0.106% for
+  0.2) and keeps the comparison on the same segment as the clean claim.
+- Annihilation at lambda 1.0 does not threaten the primary readout, which is at
+  threshold 0.01 where nothing annihilates.
+- lambda 0.2 is held in reserve for the ambiguous band in 21.4, so the design is
+  staged by construction: 20 runs now, 20 more only if needed.
+
+Cost: 20 runs, ~8.5 h at the observed ~25.5 min/run.
 
 ## Verification provenance
 
