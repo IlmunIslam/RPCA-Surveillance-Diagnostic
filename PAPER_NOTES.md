@@ -357,8 +357,11 @@ It is the wrong description of the *contribution*.
    *[`src/test_multipliers.py` test 5; `src/ssrtd.py:75,90`; RESEARCH_LOG.md §4
    item 1]*
 
-18. 🔶 **FIRST LOOK: ON CLEAN SURVEILLANCE VIDEO, `S` AND `E` SHARE THE SHARP
-   EDGES.** *One video, one lambda. A first look, NOT a result — Phase 3 decides.*
+18. ✅ **ON CLEAN SURVEILLANCE VIDEO, `S` AND `E` SHARE THE SHARP EDGES.**
+   *Phase 3 complete, 300/300 runs: 180 videos at `lambda = 0.4`, plus 5 `lambda`
+   points on 20 of them. Established, with the measured spread. The "first look /
+   one video, one lambda" caveat this item carried until 2026-11-07 is retired;
+   the paragraphs below are kept in the order they were learned.*
 
    Real SS-RTD on VIRAT `video_01` (`lambda = 0.4`, `factor = 1.0`, 100
    iterations): `L` is a clean background; but `E`, with no injected noise to
@@ -467,12 +470,44 @@ It is the wrong description of the *contribution*.
    *is* background edge structure, which is what `E` takes too. Untested hypothesis;
    the direct test is enrichment inside versus outside the annotation boxes.
 
-   If the aggregate holds across `lambda` in [0.2, 1] as it does across videos, this is
-   the smooth-vs-sharp finding the pivot exists to test. Until then the caveats are
-   the result: single `lambda`; clean input so `E` has no designated job (corroborated
-   by the noise condition — see the enrichment decomposition above and
-   `RESEARCH_LOG.md` §8); no ground truth; and voxels are spatially autocorrelated, so
-   the videos are the sample, not the voxels.
+   **IT SURVIVES `lambda`, AND IT IS NOT FLAT** (`RESEARCH_LOG.md` §20; 5 points x 20
+   videos, clean, `factor = 1.0`). **Enrichment exceeds 1 in 96 of 96 defined runs at
+   every `lambda` in [0.2, 1]**, and rises monotonically with it:
+
+   | `lambda` | `S>.05%` | `E>.05%` | median enrichment | rho vs `fg` |
+   |---|---|---|---|---|
+   | 0.2 | 0.625 | 0.487 | **29.4x** | −0.564 |
+   | 0.4 | 0.453 | 0.803 | **40.4x** | −0.731 |
+   | 0.6 | 0.294 | 0.930 | **47.3x** | −0.768 |
+   | 0.8 | 0.193 | 1.044 | **49.2x** | −0.751 |
+   | 1.0 | 0.139 | 1.140 | **55.0x** | −0.801 |
+
+   Report the two component columns beside the ratio, because they carry the
+   mechanism: raising `lambda` does not remove the shared structure, it **transfers**
+   it. On the 17-video balanced panel, `S`'s claimed voxels fall 6.1x (154,667 →
+   25,231) while `E`'s share rises 2.8x (0.447% → 1.232%) and their **sum is nearly
+   conserved** (209,556 → 254,853). `S` is penalised out of the background edges and
+   `E` takes them over — on clean input, where `E` has no noise to represent. **This
+   is the misfit-sink claim measured as a dose-response in the model's own
+   parameter**, and it is the strongest single piece of evidence for the paper's
+   thesis. Quote it as such, not as a robustness check.
+
+   Two things to state honestly. (a) **`lambda = 0.4`, Shen et al.'s own value, sits
+   near the conservative end** — enrichment there is lower than at three of the four
+   other points, so the headline figure understates. (b) At high `lambda` the sparse
+   term is **annihilated** on some clips (`S_claimed_px = 0`: `video_104` at 0.8;
+   `video_104`, `video_54`, `video_26` at 1.0), where enrichment is *undefined*, not
+   missing. Those runs are excluded from their `lambda`'s median and never imputed, so
+   the rise is quoted **paired** instead: per-video ratio to each video's own
+   `lambda = 0.4` value is 1.14x / 1.22x / 1.29x at 0.6 / 0.8 / 1.0, with **16 of 17
+   videos moving the same way at each point**. Which videos enrich most is a property
+   of the scene, not of `lambda` (rank rho +0.93 to +0.99 against the 0.4 ordering).
+
+   Remaining caveats, now the honest full list: clean input so `E` has no designated
+   job (corroborated by the noise condition — see the decomposition above and
+   `RESEARCH_LOG.md` §8); the `lambda` sweep is on the 20-video subset, not all 180;
+   no ground truth; and voxels are spatially autocorrelated, so the videos are the
+   sample, not the voxels.
    *[RESEARCH_LOG.md §7.4, §6.6; `results/scratch/measure_virat_one_after_lever_E/`,
    `results/scratch/measure_virat_one_fullspectrum/`]*
 

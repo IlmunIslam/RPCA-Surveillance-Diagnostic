@@ -42,18 +42,20 @@ all VIRAT runs** — it fits Fig. 3 better and matches Appendix A. ⚠️ The co
 done: peak **2,663 MB**, ~22-26 min per video, every change verified **bitwise**
 (§7.1-§7.7).
 
-### Phase 3 batch: 114 / 300 runs
+### Phase 3 batch: ✅ **COMPLETE — 300 / 300 runs** (finished 2026-11-06 22:19)
 
 | arm | runs | status | where |
 |---|---|---|---|
 | `clean-subset` | 20 / 20 | ✅ complete | §10 |
 | `noise-subset` | 20 / 20 | ✅ complete | §12 |
 | `factor2-subset` | 20 / 20 | ✅ complete | §14 |
-| `clean-rest` | **54 / 160** | running, interrupted | §15 (**PROVISIONAL**) |
-| `lambda-sweep` | 0 / 80 | queued, runs last | §11 |
+| `clean-rest` | 160 / 160 | ✅ complete | §19 (supersedes §15) |
+| `lambda-sweep` | 80 / 80 | ✅ complete | §20 |
 
-**Zero failed runs in 114.** The eight FAILED entries in `logs/phase3_errors.log` are
-all from the 2026-10-20 logoff (§13) and computed nothing.
+**Zero runs failed outstanding.** The nine FAILED entries in `logs/phase3_errors.log`
+are the 2026-10-20 logoff (§13, eight, computed nothing) and `video_87`'s 2026-11-03
+timeout, which was recomputed on the authorised restart and is now row 160 of
+`clean-rest`. Every planned Phase 3 measurement exists.
 
 ### The headline result so far
 
@@ -62,10 +64,22 @@ sharp background edges `S` claims. Measured as **enrichment over independence**,
 `P(E-claimed | S-claimed) / P(E-claimed)`, which is 1.0 if the supports are
 independent:
 
-- **74 / 74 clean videos above 1**, pooled median **39.7x** (§10, §15).
+- **180 / 180 clean videos above 1**, pooled median **47.4x**, range
+  **2.4x–453.3x** (§19). Broken out: 40.4x on the 20 stratified videos, **49.0x on
+  the 160 selected by nothing** — the effect is *larger* outside the subset, so
+  selection cannot explain it, and there is **no selection effect to disclose**
+  (§15.2's n=54 gap is withdrawn: p = 0.916, sign reversed).
+- **Survives `lambda`, and is not flat** (§20): **96 / 96 defined runs above 1** across
+  `lambda` in [0.2, 1], median enrichment rising **29.4x → 55.0x**. The mechanism is in
+  the component columns — `S`'s claimed voxels fall 6.1x while `E`'s share rises 2.8x
+  and their **sum is conserved**. Raising `lambda` transfers the shared structure to
+  `E` rather than removing it. `lambda = 0.4` (the paper's own value) is near the
+  **conservative** end.
 - **Dose-response:** the effect is *stronger the emptier the scene* — Spearman
-  **−0.613** against `foreground_density` over 74 videos, and it survives the
-  support-size confound (§10.3).
+  **−0.508** against `foreground_density` over 180 videos (p ~ 3.3e-13), with the
+  same decay *rate* in both groups (log-log slope −0.517 vs −0.537). It holds at all
+  five `lambda` points and strengthens with `lambda` (ρ −0.564 → −0.801), and it
+  survives the support-size confound (§10.3).
 - **Corroborated under noise:** measured on uncorrupted voxels, the noise arm gives
   median 41.9x against the clean arm's 40.4x, rank correlation **+0.994** between arms
   (§12.1). So the sink is not an absence-of-noise artifact.
@@ -87,14 +101,25 @@ framing; they are listed in that section, flagged and not yet rewritten.
 
 ## The exact next step
 
-**The batch is running unattended** (191/300 as of 2026-11-04 14:10; `clean-rest`
-131/160, the 80-run λ sweep not yet started). Two things are queued:
+**Nothing is running.** The batch is done and committed; the runner exited cleanly and
+the SYSTEM watchdog now logs `batch complete: 300 of 300 rows` every 6 h. Leave the
+scheduled task installed or remove it with
+`install_watchdog_task.ps1 -Remove` — it cannot relaunch a complete batch either way.
 
-1. **At the `clean-rest` boundary, do ONE restart** so `video_87` -- which timed out
-   on 2026-11-03 and was passed over in this pass's plan -- is recomputed, making the
-   arm 160/160 instead of 159/160. See `PHASE3_NOTES.md`, "PENDING at the clean-rest
-   boundary", which also says what to report.
-2. **Then the λ sweep runs itself** (80 runs, `RESEARCH_LOG.md` §11).
+Open work, in the order it is worth doing:
+
+1. **The five "does it transfer" framing passages** — flagged in `PAPER_NOTES.md`'s
+   framing section and deliberately not yet rewritten. This is now the only thing
+   between the record and the manuscript, and the author has stated the correct
+   framing: **SS-RTD is the instrument, not the subject.**
+2. **Optional follow-up the sweep itself generated** (§20.6): the noise condition at
+   `lambda` 0.2 and 1.0, 20 videos, 40 runs, ~17 h. §20.2 predicts the transfer should
+   be **weaker** on noisy input, because `E` there has real noise to account for. That
+   is a falsifiable prediction, not a robustness check. Author's call.
+3. **Known-untested paths**, recorded rather than fixed: the runner's disk guard (no
+   `--min-free-gb` override exists to exercise it) and `README.md` / `ssrtd.py`
+   docstring cleanup. See `PHASE3_NOTES.md`.
+4. Phases 2, 4, 5 — untouched.
 
 The original launch instructions below remain correct for a cold start.
 

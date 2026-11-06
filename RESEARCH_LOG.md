@@ -1633,8 +1633,126 @@ and decays with density at the **same rate** (-0.517 vs -0.537). The headline fi
 should be the pooled **47.4x over 180 videos** with the per-video range, never the
 subset's alone.
 
-Still open: the lambda sweep (§11), running now -- whether the effect survives the
-method's only parameter.
+Still open at the time of writing: the lambda sweep (§11). **Closed in §20** -- the
+effect survives, and is not flat.
+
+## 20. The lambda sweep COMPLETE -- 100/100 -- the effect survives, and it is NOT flat, 2026-11-07
+
+Batch finished 2026-11-06 22:19:56: `71 ok, 0 adopted, 0 failed`, CSV at **300/300**.
+The sweep is lam in {0.2, 0.6, 0.8, 1.0} on the same 20 stratified videos, clean,
+factor 1.0, joined to the already-complete lam = 0.4 arm (`clean-subset`) for five
+lambda points x 20 videos = 100 runs.
+
+**§11 predicted the wrong shape and said which answer it wanted: "flat enrichment is
+the stronger result". Enrichment is not flat.** It rises monotonically with lambda.
+That prediction is recorded as wrong rather than quietly dropped.
+
+### 20.1 The five points (median over the 20 videos; see 20.3 on the undefined cells)
+
+| lam | `S>.05%` | `E>.05%` | S empty | raw `P(E|S)%` | **enrichment** | range | >1 | rho vs fg | log-log slope |
+|---|---|---|---|---|---|---|---|---|---|
+| 0.2 | 0.625 | 0.487 | 0 | 9.97 | **29.4x** | 2.0-177.9x | 20/20 | -0.564 (p 9.6e-03) | -0.469 |
+| 0.4 | 0.453 | 0.803 | 0 | 31.31 | **40.4x** | 2.4-199.8x | 20/20 | -0.731 (p 2.5e-04) | -0.537 |
+| 0.6 | 0.294 | 0.930 | 0 | 44.89 | **47.3x** | 4.2-409.6x | 20/20 | -0.768 (p 7.6e-05) | -0.598 |
+| 0.8 | 0.193 | 1.044 | 1 | 53.72 | **49.2x** | 6.7-498.3x | 19/19 | -0.751 (p 2.1e-04) | -0.599 |
+| 1.0 | 0.139 | 1.140 | 3 | 63.49 | **55.0x** | 7.0-751.3x | 17/17 | -0.801 (p 1.1e-04) | -0.685 |
+
+**Enrichment exceeds 1 in 96 of 96 defined runs, at every lambda in [0.2, 1].** The
+finding is not an artifact of the lambda the paper happened to use.
+
+### 20.2 What the sweep actually shows: the mechanism, in the two component columns
+
+§11 required `S_gt005_pct` and `E_gt005_pct` to be read beside the ratio, because the
+ratio alone cannot say *which* term stopped claiming edges. They answer it directly.
+Across lam 0.2 -> 1.0, on the balanced panel of 17 videos where `S` is non-empty at
+every lambda:
+
+- `S` retreats: median claimed voxels **154,667 -> 25,231** (6.1x fewer);
+- `E` expands: median `E>.05%` **0.447 -> 1.232** (2.8x more);
+- their sum is nearly conserved: **209,556 -> 254,853** claimed voxels in total.
+
+So raising lambda does not remove the shared structure, it **transfers** it. The
+sparse term is penalised out of the edges and the noise term takes them over --
+on clean input, where there is no noise for `E` to represent. That is the
+misfit-sink claim measured as a dose-response in the model's own parameter, which
+is a stronger form of the paper's contribution than a flatness check would have been.
+This is the sweep's main result, not the robustness table it was commissioned as.
+
+Direction matters for the manuscript: **lambda = 0.4 (Shen et al.'s own value) sits
+near the conservative end.** Enrichment at the paper's operating point is lower than
+at three of the four other points swept, so the headline figure understates rather
+than overstates.
+
+### 20.3 Three undefined cells -- a finding, not a gap
+
+`SE_overlap_005` is blank in 4 of the 100 rows. The cause is **`S_claimed_px = 0`**:
+at high lambda the sparse term claims no voxel above 0.05 anywhere in the clip, so
+`P(E | S-claimed)` is conditioned on an empty set and is undefined, not missing.
+
+| lam | annihilated | `foreground_density` |
+|---|---|---|
+| 0.8 | `video_104` | 0.062% |
+| 1.0 | `video_104`, `video_54`, `video_26` | 0.062%, 0.154%, **0.279%** |
+
+`video_26` at 0.279% is not the emptiest scene in the subset, so annihilation is not
+purely density-ordered -- worth one sentence in the paper and no more, since n=4.
+They are excluded from the medians of their own lambda (never imputed), which is why
+the lam 1.0 column reads 17/17 rather than 20/20.
+
+**That exclusion is a survivorship risk, so the rise is quoted paired instead.** On
+the 17-video balanced panel, per-video enrichment relative to each video's own
+lam = 0.4 value:
+
+| lam vs 0.4 | median ratio | videos moving up |
+|---|---|---|
+| 0.2 | **0.83x** | 3/17 |
+| 0.6 | **1.14x** | 16/17 |
+| 0.8 | **1.22x** | 16/17 |
+| 1.0 | **1.29x** | 16/17 |
+
+Monotone, and 16/17 in the same direction at each of the three points above 0.4. The
+rise is a real within-video effect, not the three annihilated videos dropping out.
+
+### 20.4 Which videos enrich most is a property of the scene, not of lambda
+
+Rank correlation of per-video enrichment against the lam = 0.4 ordering:
+**rho +0.932 (lam 0.2), +0.991 (0.6), +0.972 (0.8), +0.968 (1.0).**
+The density dose-response holds at all five points and *strengthens* with lambda
+(rho -0.564 -> -0.801, slope -0.469 -> -0.685). Lambda moves the level; the scene
+decides the ordering.
+
+### 20.5 Fourth instance of the sensitivity asymmetry -- and the honest version of it
+
+On the same 17 videos, lam 0.2 -> 1.0:
+
+| | at lam 0.2 | at lam 1.0 | change |
+|---|---|---|---|
+| raw `P(E|S)` | 6.99% | 63.49% | **9.08x** |
+| enrichment | 25.9x | 55.0x | **2.12x** |
+
+The raw share is **4.28x more lambda-sensitive** than enrichment. This is the fourth
+independent case (threshold 2.16x, noise condition, factor 2.0, now lambda) of the
+same asymmetry, and the largest single perturbation of the four.
+
+The honest reading stays the one given on 2026-11-04 when this was raised as a
+question: the asymmetry is a **good reason to report enrichment instead of the raw
+share**, and it is *not* a finding about the world in its own right. Normalising
+`P(E|S)` by `P(E)` removes the part of the movement that is just `E` getting bigger,
+which is most of it -- that is arithmetic working as intended, not a discovered
+invariance. Enrichment moving 2.12x is itself proof it is not invariant. Claiming
+"enrichment is stable under perturbation" would be an over-reading; claiming "the
+normalised statistic is the defensible one to report, and here is the measured
+spread" is supported. The manuscript should say the second.
+
+### 20.6 What is now closed
+
+All five arms are complete: 300/300 rows, 0 failures outstanding. Every planned
+measurement for Phase 3 exists. The deferred follow-up in §11 -- the noise condition
+at the two lambda extremes -- is **still worth running**, and for a changed reason:
+not because lambda might overturn the effect (it does not), but because 20.2 predicts
+that on *noisy* input the transfer should be weaker, since `E` there has real noise to
+account for and less capacity to absorb edges. That is a falsifiable prediction the
+sweep itself generated. 40 runs, ~17 h. Author's call.
 
 ## Verification provenance
 
