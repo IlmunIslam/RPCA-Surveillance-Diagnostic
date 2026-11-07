@@ -33,22 +33,27 @@ clean-subset checkpoint gives it a **dose-response** (enrichment vs
 sweep (§11) tests whether it survives the method's only parameter; if it does, the
 sink is structural rather than a tuned coincidence.
 
-**Places in the record that currently read the other way round** and need
-rewording when the manuscript is drafted (flagged 2026-10-20, deliberately **not**
-rewritten yet):
+**Places in the record that read the other way round** — flagged 2026-10-20,
+✅ **all five rewritten 2026-11-07** once the record was complete
+(`RESEARCH_LOG.md` §23). Kept as the record of what was flagged and how it was
+resolved:
 
-| file | line | current framing |
+| file | what it said | resolution |
 |---|---|---|
-| `CLAUDE.md` | 11 | "whether a method designed … transfers to sharp-edged surveillance foreground" |
-| `START_HERE.md` | 10, 115 | "used to test whether a method … transfers" |
-| `RESEARCH_PLAN.md` | 15, 42, 67 | the research question *is* "does it transfer?"; "smooth-vs-sharp comparison" |
-| `RESEARCH_LOG.md` | 707-708 | §7.4 "the smooth-vs-sharp finding the pivot exists to test" |
-| `PAPER_NOTES.md` | item 18 close | same "smooth-vs-sharp finding" phrase |
+| `CLAUDE.md` | "whether a method designed … transfers to sharp-edged surveillance foreground" | ✅ rewritten — leads with the contribution; transfer named as the experiment |
+| `START_HERE.md` | "used to test whether a method … transfers" | ✅ rewritten, same shape |
+| `RESEARCH_PLAN.md` | the research question *is* "does it transfer?"; "smooth-vs-sharp comparison" | ✅ split into **Contribution** and **Research question (the experiment)**; figure 5 relabelled "the misfit sink, shown directly", smooth-vs-sharp as its vehicle |
+| `RESEARCH_LOG.md` §7.4 | "the smooth-vs-sharp finding the pivot exists to test" | ✅ **superseded, NOT edited** — banner points to §23, original text untouched, exactly as §15 was handled. It records what was believed on 2026-09-19. |
+| `PAPER_NOTES.md` item 18 close | same "smooth-vs-sharp finding" phrase | ✅ replaced by the `lambda`-sweep result (§20) during that pass |
 
 `IMPLEMENTATION_PLAN.md`'s "smooth-vs-sharp figures" is a figure filename and is
-harmless. Note that the smooth-vs-sharp transfer question is **not wrong** -- it is
-the narrower special case, and it remains the right description of the *experiment*.
-It is the wrong description of the *contribution*.
+harmless.
+
+⚠️ **The transfer question is NOT wrong and was demoted, not deleted.** It is the
+narrower special case and remains the right description of the *experiment*; it is the
+wrong description of the *contribution*. Every earlier `RESEARCH_LOG` section that uses
+it is **history, not a current claim**, and must not be edited to match the present
+framing — see §23.3.
 
 
 ## For the Methodology section (deviations that must be disclosed)

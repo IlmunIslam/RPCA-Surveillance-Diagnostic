@@ -680,7 +680,19 @@ time knob. Per-video timeout in the old runner is 3,600 s; 36 min fits, but the
 Convergence was healthy: `err_X` 177 → 0.58, constraint residual 0.027% of ‖X‖,
 `beta_X` grew on 40/100 iterations to 236, `beta_f` to 7,815.
 
-### 7.4 First look at the research question — S and E share the edges
+### 7.4 First look at the research question — S and E share the edges — **FRAMING SUPERSEDED BY §23**
+
+> 🛑 **FRAMING SUPERSEDED, 2026-11-07.** This section's closing paragraph calls
+> the observation "the smooth-vs-sharp finding the pivot exists to test". That was the
+> project's framing in 2026-09 and it describes the *experiment* correctly, but it is
+> **not** the contribution the completed record supports. Read **§23** for the current
+> framing. The **measurements** here are superseded only as already noted inline (the
+> per-frame values were replaced by whole-tensor ones); it is the framing that §23
+> replaces.
+>
+> This section is kept **unedited**, like §15, because it is the record of what was
+> believed and acted on at the time, and the project's rule is that the record shows
+> what was thought when, not what is thought now.
 
 **One video, one lambda, first look: not a result.** Frame 151 of `video_01`
 (`decomposition_frame.png`):
@@ -2031,6 +2043,77 @@ What this does **not** establish, per §21.5 and unchanged by the result:
 now carries one pre-registered prediction, its timestamped commit (`63913fb`), and
 its result -- which is the strongest form the edge-sharing claim can take without
 ground-truth annotations.
+
+## 23. The framing, settled: the model-class claim, with the transfer question demoted, 2026-11-07
+
+Written when the record was complete (320/320, six arms, one pre-registered test) and
+the five passages that stated the narrower framing were rewritten. Supersedes the
+framing of §7.4 and of §8's "does it transfer" phrasing; **supersedes no measurement.**
+Author's instruction, 2026-10-20 and again 2026-11-07: "SS-RTD is the instrument, not
+the subject."
+
+### 23.1 The contribution
+
+> In a three-component decomposition `X = L + S + E`, the term designated for **noise**
+> becomes a **misfit sink** when that noise is absent -- and the sink coincides with the
+> **sparse** term more completely the emptier the scene.
+
+What the completed record supports, each clause earning its place:
+
+| clause | evidence | where |
+|---|---|---|
+| the noise term becomes a sink | `E` lands on sharp *background* edges on clean input, with 180/180 videos enriched above independence (pooled median 47.4x at threshold 0.05, 4.7x at 0.01) | §10, §19, §20.7b |
+| ...**when that noise is absent** | and it keeps doing so when noise is *present*: on uncorrupted voxels the sink is statistically indistinguishable from clean, while `E`'s noise work stays independent of `S` (0.99x on corrupted voxels) | §12, **§22** |
+| ...**coinciding with the sparse term** | raising lambda transfers structure from `S` to `E` -- `S`'s support falls 6.1x while `E`'s rises 2.8x, `E` gaining about twice what `S` loses | §20.2, §20.7a |
+| ...**more completely the emptier the scene** | Spearman -0.508 against `foreground_density` over 180 videos (p ~ 3.3e-13), same decay rate in both video groups (log-log slope -0.517 vs -0.537), holding at all five lambda | §19, §20.1 |
+
+The claim is about a **model class**, not an implementation and not an author's method.
+It applies to any `L + S + E` decomposition whose `E` has no designated signal to
+represent, which is why the finding is worth publishing even though SS-RTD itself is
+faithfully reimplemented and behaves as specified.
+
+### 23.2 The transfer question: demoted, not deleted
+
+> Does SS-RTD -- designed and validated for smooth X-ray foreground -- transfer to
+> sharp-edged surveillance foreground?
+
+This is **the correct description of the experiment** and it stays in the record and in
+the manuscript's experimental section. It is the narrower special case: a single
+instrument, a single pair of domains. What it is **not** is the contribution, for three
+reasons worth stating because each is a reviewer's objection pre-empted:
+
+1. **"Does it transfer" invites the answer "then don't use it there"**, which is a
+   note, not a paper. The sink claim identifies a structural property of the model
+   class and predicts where it will recur.
+2. **It mis-attributes.** SS-RTD is faithfully reimplemented and does what its paper
+   says. Framing the result as a failure of SS-RTD would be a finding about Shen et
+   al., which the evidence does not support -- see §4 item 1, where the *original*
+   manuscript's error was exactly this kind of mis-attribution, in the other direction.
+3. **It understates the generality.** The dose-response in scene emptiness (§19) and
+   in lambda (§20) are properties of the decomposition, not of the X-ray-to-
+   surveillance hop, and §22 shows they survive giving `E` its designated job back.
+
+**Rule for the manuscript:** the transfer test is how the claim was obtained; the claim
+is about the model class. Never the reverse.
+
+### 23.3 What was rewritten, and what deliberately was not
+
+Rewritten 2026-11-07 (these are live orientation documents, so they now state the
+current framing):
+
+| file | what changed |
+|---|---|
+| `CLAUDE.md` | "What this project is" leads with the contribution; transfer named as the experiment |
+| `START_HERE.md` | same, plus the framing-status note now records this rewrite |
+| `RESEARCH_PLAN.md` | "Research question" split into **Contribution** and **Research question (the experiment)**; Phase 2 and figure 5 relabelled -- figure 5 is now "the misfit sink, shown directly", with smooth-vs-sharp as its vehicle |
+| `PAPER_NOTES.md` item 18 close | the "smooth-vs-sharp finding the pivot exists to test" sentence replaced |
+
+**Not rewritten, by instruction:** `RESEARCH_LOG.md` §7.4 carries a banner pointing
+here and its text is untouched, exactly as §15 was handled. §7.4 is the record of what
+was believed on 2026-09-19 and acted on; editing it would destroy the one thing a
+research log is for. The same applies to §8's phrasing and to every earlier section
+that uses the transfer framing: **they are history, not current claims.**
+`IMPLEMENTATION_PLAN.md`'s "smooth-vs-sharp figures" is a filename and is left alone.
 
 ## Verification provenance
 

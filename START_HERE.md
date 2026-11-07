@@ -7,9 +7,18 @@
 ## What this project is
 
 This repository is a faithful reimplementation of **SS-RTD** (Shen et al., IEEE TASE
-2022), used to test whether a method designed for smooth X-ray foreground transfers to
-sharp-edged surveillance video (VIRAT), for an IEEE Access paper that received a major
-revision. The project pivoted after we discovered that the old code (`src/ssrtd.py`),
+2022), used as the **instrument** for a claim about a class of models, for an IEEE Access
+paper that received a major revision.
+
+**The contribution:** in a three-component decomposition `X = L + S + E`, the term
+designated for **noise** becomes a **misfit sink** when that noise is absent, and the
+sink coincides with the **sparse** term more completely the emptier the scene.
+**SS-RTD is the instrument, not the subject.**
+
+The *experiment* is a domain-transfer test: a method designed and validated on smooth
+X-ray foreground, run on sharp-edged surveillance video. That is the right description
+of the **experiment** and the wrong description of the **contribution** -- the narrower
+special case of the claim above, kept because the experiment is what produced it. The project pivoted after we discovered that the old code (`src/ssrtd.py`),
 whose results the original manuscript reported as "SS-RTD", **was not SS-RTD**: it had no
 total-variation term, no Tucker decomposition, two parameters instead of one, and a
 different penalty schedule. That old method is now kept as an honestly labelled **naive
@@ -78,9 +87,10 @@ independent:
   `63913fb`. ⚠️ It refutes one rival; it does not prove the mechanism.
 - **Survives `lambda`, and is not flat** (§20): **96 / 96 defined runs above 1** across
   `lambda` in [0.2, 1], median enrichment rising **29.4x → 55.0x**. The mechanism is in
-  the component columns — `S`'s claimed voxels fall 6.1x while `E`'s share rises 2.8x
-  and their **sum is conserved**. Raising `lambda` transfers the shared structure to
-  `E` rather than removing it. `lambda = 0.4` (the paper's own value) is near the
+  the component columns — `S`'s claimed voxels fall 6.1x while `E`'s share rises 2.8x,
+  and **`E` gains about twice what `S` loses** (an earlier "sum is conserved" phrasing
+  is withdrawn, §20.7a). Raising `lambda` transfers the shared structure to `E`
+  rather than removing it, and `E` overshoots. `lambda = 0.4` (the paper's own value) is near the
   **conservative** end.
 - **Dose-response:** the effect is *stronger the emptier the scene* — Spearman
   **−0.508** against `foreground_density` over 180 videos (p ~ 3.3e-13), with the
@@ -103,8 +113,11 @@ independent:
 does not transfer". It is that a three-component model's designated noise term becomes
 a **misfit sink** when that noise is absent, and the sink coincides with the sparse
 term more completely the emptier the scene. **SS-RTD is the instrument, not the
-subject.** Five places in the record still state the narrower "does it transfer"
-framing; they are listed in that section, flagged and not yet rewritten.
+subject.** ✅ The five passages that read the other way round were **rewritten
+2026-11-07**; the transfer question is demoted to a description of the experiment, not
+deleted, since it remains accurate at that level. `RESEARCH_LOG.md` §7.4 was
+**superseded, not edited** (§7.4's banner points to §23), because it records what was
+believed in 2026-09.
 
 ## The exact next step
 
@@ -115,10 +128,11 @@ scheduled task installed or remove it with
 
 Open work, in the order it is worth doing:
 
-1. **The five "does it transfer" framing passages** — flagged in `PAPER_NOTES.md`'s
-   framing section and deliberately not yet rewritten. This is now the only thing
-   between the record and the manuscript, and the author has stated the correct
-   framing: **SS-RTD is the instrument, not the subject.**
+1. ~~The five "does it transfer" framing passages~~ — **DONE 2026-11-07**
+   (`RESEARCH_LOG.md` §23). The contribution now reads as the model-class claim in
+   every live document; the transfer question is **demoted to the experiment**, not
+   deleted, because it is accurate at that level. §7.4 was **superseded, not edited**.
+   **SS-RTD is the instrument, not the subject.**
 2. ~~The noise follow-up~~ — **DONE** (§21 pre-registered, §22 result). 20 runs, not
    40: the ambiguous band that would have triggered `lambda` 0.2 was not hit. The
    "`E` is just idle" objection is refuted (paired slope 1.263x under noise against

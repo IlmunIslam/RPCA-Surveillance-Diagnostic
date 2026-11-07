@@ -7,10 +7,20 @@
 ## What this project is
 
 A **faithful reimplementation of SS-RTD** (Shen et al., IEEE TASE 2022,
-DOI 10.1109/TASE.2022.3163674), used to ask whether a method designed and validated on
-smooth X-ray foreground transfers to sharp-edged surveillance foreground (VIRAT), plus a
-comparison against a **naive three-component baseline**. Target: IEEE Access (a major
-revision of an earlier submission).
+DOI 10.1109/TASE.2022.3163674), used as the **instrument** for a claim about a class of
+models, plus a comparison against a **naive three-component baseline**. Target:
+IEEE Access (a major revision of an earlier submission).
+
+**The contribution:** in a three-component decomposition `X = L + S + E`, the term
+designated for **noise** becomes a **misfit sink** when that noise is absent -- and the
+sink coincides with the **sparse** term more completely the emptier the scene.
+SS-RTD is the instrument, **not the subject**.
+
+The *experiment* that establishes this is a domain-transfer test -- a method designed and
+validated on smooth X-ray foreground, run on sharp-edged surveillance foreground (VIRAT).
+That remains the correct description of the experiment and it is not wrong; it is the
+narrower special case. It is the wrong description of the **contribution**, and must not
+be used as one. See `PAPER_NOTES.md`'s framing section.
 
 The project pivoted in 2026-09 after discovering that the code the original manuscript
 called "SS-RTD" is not SS-RTD. See `RESEARCH_LOG.md` §4 item 1.

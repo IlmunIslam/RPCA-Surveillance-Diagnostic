@@ -11,8 +11,16 @@ mislabeling.
 
 ## New paper framing (Path A+C merge)
 
-**Research question:** does SS-RTD — designed and validated for SMOOTH X-ray foreground —
-transfer to SHARP-EDGED surveillance foreground?
+**Contribution (the claim the paper makes):** in a three-component decomposition
+`X = L + S + E`, the term designated for NOISE becomes a MISFIT SINK when that noise is
+absent, and the sink coincides with the SPARSE term more completely the emptier the
+scene. **SS-RTD is the instrument, not the subject.**
+
+**Research question (the experiment that establishes it):** does SS-RTD — designed and
+validated for SMOOTH X-ray foreground — transfer to SHARP-EDGED surveillance foreground?
+This is the narrower special case and remains the correct description of the
+*experiment*. It is **demoted, not deleted**: do not state it as the contribution.
+See `PAPER_NOTES.md`'s framing section.
 
 The old no-TV three-component method becomes an honest BASELINE (never called SS-RTD),
 motivating why the TV smoothness term matters.
@@ -39,7 +47,9 @@ motivating why the TV smoothness term matters.
 - **Phase 1:** implement real SS-RTD component-by-component, each unit-tested, then reproduce
   the paper's own results on a public benchmark (Candela/Caviar/Highway) BEFORE any VIRAT run.
   See `IMPLEMENTATION_PLAN.md` (to be written before Phase 1 coding begins).
-- **Phase 2:** reframe research questions (two explicit questions; smooth-vs-sharp transfer).
+- **Phase 2:** reframe research questions (two explicit questions). State the
+  model-class claim as the contribution and the smooth-vs-sharp transfer test as the
+  experiment that establishes it — not the other way round.
 - **Phase 3:** run real SS-RTD on 180 VIRAT via existing infrastructure; compression;
   parameter behavior across single λ; naive-baseline comparison.
 - **Phase 4:** fix ALL reviewer points + the bugs the research log found (real PSNR/SSIM
@@ -64,9 +74,11 @@ Essential figures:
    iteration on surveillance video. Proves the implementation runs correctly.
 4. **LAMBDA SENSITIVITY** — decomposition behavior across `lambda` in [0.2, 1]. The
    scientifically meaningful replacement for the old two-parameter sweep.
-5. **SMOOTH-VS-SHARP COMPARISON (most compelling)** — real SS-RTD on a smooth dataset
-   (Candela) beside real SS-RTD on a sharp VIRAT video. Visualizes the domain-transfer
-   question directly.
+5. **THE MISFIT SINK, SHOWN DIRECTLY (most compelling)** — real SS-RTD on a smooth
+   dataset (Candela), where `E` has designated noise to represent, beside real SS-RTD on
+   a sharp VIRAT video, where it has none and lands on `S`'s background edges instead.
+   The smooth-vs-sharp contrast is the *vehicle*; what the figure shows is the noise term
+   becoming a sink. Label it as the latter.
 6. **BASELINE COMPARISON** — real SS-RTD (with TV) vs the naive no-TV three-component
    method. Shows what the TV smoothness term does.
 
