@@ -13,7 +13,7 @@ IEEE Access (a major revision of an earlier submission).
 
 **The contribution:** in a three-component decomposition `X = L + S + E`, the term
 designated for **noise** becomes a **misfit sink** when that noise is absent -- and the
-sink coincides with the **sparse** term more completely the emptier the scene.
+sink coincides with the **sparse** term more completely the less temporal change the scene contains.
 SS-RTD is the instrument, **not the subject**.
 
 The *experiment* that establishes this is a domain-transfer test -- a method designed and

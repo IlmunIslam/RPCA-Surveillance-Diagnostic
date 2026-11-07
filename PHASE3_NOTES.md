@@ -349,3 +349,32 @@ The other recovered notes were stale, and are deliberately **not** copied:
   exist.
 - **The parameter-sweep result is already in git**, correctly labelled as the naive
   baseline, in `RESEARCH_LOG.md` §3.2 and `ARCHIVE_BASELINE.md`.
+
+## Enrichment's denominator does the work (the quantitative sibling of the rule above)
+
+> **Whenever enrichment is compared between two populations whose `E`-density differs,
+> the denominator does the work. Report the raw conditional `P(E|S)` alongside, every
+> time.**
+
+`enrichment = P(E | S-claimed) / P(E)`. The second factor is a property of the
+*population*, not of any relationship between `S` and `E`, so comparing enrichment
+across populations that differ in how often `E` fires measures mostly that difference.
+
+Five instances in this project:
+
+| where | populations compared | caught? |
+|---|---|---|
+| `RESEARCH_LOG.md` §14 | `factor` 1.0 vs 2.0 | yes |
+| §20.7b | measurement threshold 0.01 vs 0.05 | yes -- the 47.4x headline is threshold-specific |
+| §21.2 | clean vs noise (`beta_X` differs 1.53x) | **yes, before the test** -- which is the only reason §22 is interpretable |
+| §22.3 | an unexplained 3-8% clean/noise excess | yes, and left unclaimed |
+| **§25.4** | inside vs outside annotation boxes (`E` 17.60x denser inside) | **NO** -- reported to the author as a strong result first, then withdrawn |
+
+§25.4 is the one that got through. The gap looked like a 14.71x effect at p 2.6e-26 on
+157 of 179 videos; the raw conditional was 31.5% inside against 29.8% outside, i.e.
+flat. The check took four minutes and the alternative was a confound as the
+manuscript's headline mechanism result.
+
+This sits beside the older rule -- *every check must be able to say "unknown"* -- and
+has the same shape: **a statistic that reports confidently while being structurally
+unable to distinguish the effect from a nuisance parameter.**

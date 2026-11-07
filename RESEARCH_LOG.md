@@ -2056,7 +2056,15 @@ the subject."
 
 > In a three-component decomposition `X = L + S + E`, the term designated for **noise**
 > becomes a **misfit sink** when that noise is absent -- and the sink coincides with the
-> **sparse** term more completely the emptier the scene.
+> **sparse** term more completely **the less temporal change the scene contains**.
+
+> ⚠️ **Fourth clause revised 2026-11-07 (§25.3).** It read "the emptier the scene"
+> until the annotation validation showed `foreground_density` is **not** an occupancy
+> proxy (Spearman +0.382 against annotated `box_occupancy`, Pearson ~0). The
+> dose-response survives against occupancy independently (rho -0.329, p 6e-06), so the
+> clause is **weakened, not dropped** -- but the predictor must always be described as
+> what it measures, median-deviation temporal change, never as scene emptiness.
+> §25.3a gives the mechanism reason this is the right predictor rather than a fallback.
 
 What the completed record supports, each clause earning its place:
 
@@ -2065,7 +2073,8 @@ What the completed record supports, each clause earning its place:
 | the noise term becomes a sink | `E` lands on sharp *background* edges on clean input, with 180/180 videos enriched above independence (pooled median 47.4x at threshold 0.05, 4.7x at 0.01) | §10, §19, §20.7b |
 | ...**when that noise is absent** | and it keeps doing so when noise is *present*: on uncorrupted voxels the sink is statistically indistinguishable from clean, while `E`'s noise work stays independent of `S` (0.99x on corrupted voxels) | §12, **§22** |
 | ...**coinciding with the sparse term** | raising lambda transfers structure from `S` to `E` -- `S`'s support falls 6.1x while `E`'s rises 2.8x, `E` gaining about twice what `S` loses | §20.2, §20.7a |
-| ...**more completely the emptier the scene** | Spearman -0.508 against `foreground_density` over 180 videos (p ~ 3.3e-13), same decay rate in both video groups (log-log slope -0.517 vs -0.537), holding at all five lambda | §19, §20.1 |
+| ...**more completely the less temporal change the scene contains** | Spearman -0.508 against `foreground_density` over 180 videos (p ~ 3.3e-13), same decay rate in both video groups (log-log slope -0.517 vs -0.537), holding at all five lambda; **independently corroborated against annotated object occupancy at rho -0.329 (p 6e-06)** | §19, §20.1, **§25.2** |
+| ❌ *NOT supported: that the coincidence is localised to background* | the inside/outside-box enrichment gap (14.71x) is **entirely** enrichment's denominator; the raw `P(E\|S)` is ~30% both inside and outside | **§25.4** |
 
 The claim is about a **model class**, not an implementation and not an author's method.
 It applies to any `L + S + E` decomposition whose `E` has no designated signal to
@@ -2241,6 +2250,195 @@ its own population, at thresholds 0.05 and 0.01.
 Reported with the same restraint as §22: this tests one directional consequence of the
 mechanism, and confirming it refutes the alternatives above rather than proving the
 mechanism.
+
+## 25. RESULT of §24: the proxy fails, the dose-response survives, and §24.4's prediction is NOT SUPPORTED, 2026-11-07
+
+Both analyses ran on all 180 videos as §24 specified, with no new compute. Outputs in
+`results/metrics/box_occupancy.csv`. Two of the three headline readings went against us,
+and one of those was a result I had already reported to the author as strong before
+checking it. That retraction is 25.4.
+
+### 25.1 Analysis 1 -- the agreement test FAILS
+
+| statistic | value |
+|---|---|
+| Spearman rho(`box_occupancy`, `foreground_density`), n=180 | **+0.382** (p 1.2e-07) |
+| Pearson r | **-0.057** (p 0.45) -- essentially zero, and negative |
+| §24.2's pre-fixed agreement threshold | rho >= +0.70 -- **NOT MET** |
+| `box_occupancy` % | min 0.111, median 1.490, max 25.849 |
+| `foreground_density` % | min 0.013, median 0.305, max 4.263 |
+| frames with zero annotated objects | median 0; only 4/180 videos have any; none entirely empty |
+
+**`foreground_density` is not a validated occupancy proxy.** The reviewer attack
+identified as the weakest point in the record lands: the two measures are only loosely
+monotonically related and not linearly related at all. "The emptier the scene" cannot
+stand as written.
+
+### 25.2 Analysis 1b -- but the dose-response survives the predictor swap
+
+| threshold | enrichment vs `box_occupancy` | vs `foreground_density` | difference |
+|---|---|---|---|
+| 0.05 | **rho -0.329** (p 6.4e-06) | rho -0.508 (p 3.3e-13) | 0.179 |
+| 0.01 | **rho -0.234** (p 1.6e-03) | rho -0.509 (p 3.1e-13) | 0.274 |
+
+Not null: significant, negative, same direction, weaker. The dose-response reproduces
+against a measure of scene content that is **independent of the pixel statistics the
+decomposition itself uses** -- which is the control §19 lacked.
+
+### 25.3 The outcome mapping, and a flaw in my own pre-specification
+
+**§24.3's four outcomes did not span the space, and the result fell between B and C.**
+Recorded as a defect in the pre-specification rather than resolved by picking the
+kinder branch:
+
+- **C's criterion fires**: rho = 0.382 < 0.40.
+- **C's conclusion is contradicted by 25.2**: "the dose-response is not about scene
+  content" is false -- it reproduces against annotated object occupancy at p = 6e-06.
+- **B's conclusion fits the substance**, but B was worded on the assumption that
+  occupancy would be left *unestablished*. It is established, in the same direction.
+
+The error was writing the criteria as a disjunction over two quantities that could move
+independently (proxy agreement, and the dose-response against the proxy's replacement)
+while attaching a single conclusion to each branch. A correct pre-specification would
+have crossed them. **The operative conclusion is B's**, because C's rationale is
+factually refuted, and that reading is justified from both criteria above rather than
+claimed as a clean branch fire.
+
+**The claim as it now reads** (replacing §23.1's fourth clause):
+
+> ...and the sink coincides with the sparse term more completely **the less temporal
+> change the scene contains** -- with annotated object occupancy independently
+> corroborating the direction, more weakly (rho -0.329 against -0.508).
+
+`foreground_density` is retained as the primary predictor, and must be **described as
+what it measures** -- median-deviation temporal change -- never as scene emptiness.
+
+### 25.3a Why temporal change is the defensible predictor, not a fallback
+
+`video_101` is the case that carries this, and it is the disagreement §24.2 predicted
+when "all object types" was fixed as primary:
+
+| video | `foreground_density` | `box_occupancy` | occupancy rank | enrichment |
+|---|---|---|---|---|
+| **video_101** | **0.0237%** (4th lowest) | **10.197%** | **138 / 180** | **135.0x** |
+
+A scene whose frames are 10% covered by annotated objects yet has almost no temporal
+change -- parked cars -- and it enriches at 135x, behaving like an empty scene. Only
+12 of the 20 lowest-`foreground_density` videos are also in the 20
+lowest-`box_occupancy`.
+
+This has a mechanism reason, not merely an empirical one: **`S` is the sparse *moving*
+term with TV smoothing, so a stationary car belongs to `L`, not `S`.** Occupancy counts
+content that `S` was never going to claim. So occupancy was the wrong operationalisation
+of "what `S` has to claim", and the proxy's failure to track occupancy is partly a
+property of occupancy rather than a defect of the proxy. That argument is available
+because the definition was fixed in §24.2 **before** the disagreement was seen; it would
+not be available otherwise.
+
+### 25.4 Analysis 2 -- §24.4's PRE-REGISTERED PREDICTION IS NOT SUPPORTED
+
+🛑 **And a retraction.** On 2026-11-07, before running the confound check, I reported
+this result to the author as "emphatic" and "the strongest single result in the record".
+**That was wrong and is withdrawn.**
+
+As literally operationalised, the prediction confirmed:
+
+| threshold | inside | outside | ratio | videos | sign-test p |
+|---|---|---|---|---|---|
+| 0.05 | 2.99x | 50.95x | **14.71x** | 157/179 | 2.6e-26 |
+| 0.01 | 1.70x | 5.12x | 2.33x | 144/180 | 1.7e-16 |
+
+**The entire gap is enrichment's denominator.** The de-confounding check reports the raw
+conditional `P(E|S)`, which has no `P(E)` in it:
+
+| threshold 0.05 | `S>thr%` | `E>thr%` | **raw `P(E\|S)%`** | enrichment |
+|---|---|---|---|---|
+| INSIDE boxes | 21.507 | 8.265 | **31.548** | 2.99x |
+| OUTSIDE boxes | 0.070 | 0.516 | **29.826** | 50.95x |
+
+- Raw conditional, outside/inside: **0.781x** -- favouring **inside**, on 54/179 videos
+  only, p = 1.00. Threshold 0.01 agrees: 0.774x, 33/180.
+- `E` is **17.60x denser inside** boxes. A pure denominator effect therefore predicts a
+  17.60x enrichment gap; the observed gap is **14.71x**, i.e. *smaller* than the
+  denominator alone would produce. **There is no residual localisation signal.**
+
+Scored honestly:
+
+| | verdict |
+|---|---|
+| prediction as written (enrichment outside > inside) | confirmed, p 2.6e-26 |
+| what it was registered to **mean** (background-edge localisation) | **NOT SUPPORTED** |
+| §24.4's named worst case -- "uniform inside and outside, the coincidence is global and not edge-localised" | **approximately what occurred** (30% inside vs 30% outside) |
+
+**The prediction was badly operationalised by me.** I chose a statistic whose
+denominator does the work, in a comparison between two populations whose `E`-density
+differs 17.6x. The S-and-E coincidence *rate* is roughly uniform across background and
+annotated foreground at about 30%.
+
+**What this does and does not damage.** Untouched: global enrichment > 1 (180/180), the
+lambda transfer (§20), the idleness refutation (§22), and the dose-response (§19, 25.2)
+-- none of which compare populations of differing `E`-density. The casualty is the
+**spatial-localisation** claim, which is exactly the one I was about to promote to the
+mechanism's direct proof. §7.4's visual observation that `E` lands on background edges
+may still describe where `E`'s *mass* is; what is refuted is that `E`'s *coincidence
+with `S`* is background-specific.
+
+### 25.5 The pattern, named for the fifth time
+
+> **Whenever enrichment is compared between two populations whose `E`-density differs,
+> the denominator does the work. The raw conditional `P(E|S)` must be reported
+> alongside, every time.**
+
+Instances: §14 (`factor`), §20.7b (measurement threshold), §21.2 (`beta_X` under noise
+-- caught *before* the test, which is why §22 is interpretable), §22.3 (the unexplained
+3-8% excess), and now §25.4 (box populations -- **not** caught before reporting). The
+project's older rule was "every check must be able to say unknown"; this is its
+quantitative sibling and belongs in `PHASE3_NOTES.md` beside it.
+
+That the check cost four minutes, and that committing §25 before running it would have
+put a confound in the manuscript as its headline mechanism result, is the argument for
+running it on every such comparison without being asked.
+
+### 25.6 EXPLORATORY (not pre-registered): `E` is far less foreground-selective than `S`
+
+Found while de-confounding 25.4, on the same data. **Labelled exploratory and quoted at
+that strength**; presenting it as confirmatory would be the tuning §24 exists to
+prevent.
+
+The component rates show a real asymmetry that needs no "expected under independence"
+normalisation -- it compares marginal densities, not co-occurrence:
+
+| threshold 0.05 | E:S density ratio |
+|---|---|
+| inside boxes (annotated foreground) | **0.568** median -- `S` outnumbers `E` |
+| outside boxes (background) | **5.586** median -- `E` outnumbers `S` |
+| asymmetry (outside / inside) | **10.22x** median, geo-mean 8.34x, **166/179 videos**, p 5.6e-35 |
+
+`E` outnumbers `S` in the background on **158/179** videos, and inside boxes on only
+**43/179**. Equivalently: `S` concentrates into annotated object regions 306x, `E` only
+16x. **The noise term is ~19x less foreground-selective than the sparse term.** That is
+the misfit sink localised -- `E`'s mass is disproportionately where `S` has almost none
+-- rather than "they coincide on background", which 25.4 rejects.
+
+Two honest qualifications:
+
+1. **Box inflation biases this downward.** §24.2's `floor`/`ceil` mapping counts true
+   background as inside, diluting the inside estimate toward background values and
+   *reducing* the measured asymmetry. Conservative, in our disfavour.
+2. ⚠️ **The asymmetry-versus-occupancy correlation is partly circular and is not
+   quoted as support.** It is strong (rho -0.618 at threshold 0.05, -0.699 at 0.01, both
+   p < 1e-19, far stronger than against `foreground_density` at -0.356 / -0.293), but
+   both sides of it are defined from the same boxes, so a video with large box coverage
+   mechanically has a large "inside" population and a small "outside" one. **This is
+   recorded so nobody later reports -0.699 as evidence that occupancy is the better
+   predictor.** Disentangling it needs a separate design, not a re-reading of this one.
+
+**Its confirmatory test, specified but deliberately not run here:** the same asymmetry
+under the noise condition, where `E` has legitimate background work to do. If `E` is a
+misfit sink, the asymmetry should **shrink** when `E` is given real noise to represent,
+because part of its background mass then has a designated job. The 20 `noise-subset`
+runs already hold the supports and masks needed. That is a new pre-registration, and it
+goes in its own section before it is run.
 
 ## Verification provenance
 

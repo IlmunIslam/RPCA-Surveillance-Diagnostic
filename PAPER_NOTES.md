@@ -21,7 +21,7 @@
 **The contribution is not "SS-RTD does not transfer."** It is that **a
 three-component model's designated noise term becomes a misfit sink when that
 noise is absent, and the sink coincides with the sparse term more completely the
-emptier the scene.** SS-RTD is the **instrument**, not the subject.
+less temporal change the scene contains.** SS-RTD is the **instrument**, not the subject. (§25.3: revised from "the emptier the scene" — the predictor is median-deviation temporal change, NOT occupancy)
 
 Why this is the stronger claim: "does method X transfer to dataset Y" is a yes/no
 about one method on one dataset, and a reviewer can discount it as a tuning or
@@ -494,7 +494,35 @@ framing — see §23.3.
    representative one. Do **not** quote the pooled ratio (4.9x) — `video_01` alone
    carries 90% of its expected count.
 
-   **Second result, same arm: the effect is stronger the emptier the scene.**
+   ⚠️ **THE PREDICTOR IS TEMPORAL CHANGE, NOT EMPTINESS** (`RESEARCH_LOG.md` §24
+   pre-specified, §25 result; annotation validation on all 180 videos). VIRAT's
+   ground-truth boxes give an independent measure of scene content, and
+   **`foreground_density` fails as an occupancy proxy**: Spearman **+0.382** against
+   annotated `box_occupancy`, Pearson **-0.057**. It is a median-deviation change
+   detector (`src/metrics.py:55`) and must be *described* as one in the paper, never as
+   scene emptiness.
+
+   The dose-response itself **survives** the predictor swap -- enrichment vs
+   `box_occupancy` gives rho **-0.329** (p 6.4e-06) at threshold 0.05 and **-0.234**
+   (p 1.6e-03) at 0.01 -- so it reproduces against a content measure independent of the
+   pixel statistics the decomposition uses. That is the control this claim previously
+   lacked. `video_101` is the case to quote: `foreground_density` 0.0237% (4th lowest)
+   but `box_occupancy` 10.197% (rank 138/180) -- parked cars -- and it still enriches at
+   135x. There is a mechanism reason temporal change is the right predictor: **`S` is
+   the sparse *moving* term, so a stationary car belongs to `L`**, and occupancy counts
+   content `S` was never going to claim.
+
+   ❌ **DO NOT claim the coincidence is localised to background.** The
+   inside/outside-box enrichment gap (14.71x, 157/179 videos) is **entirely** the
+   denominator: `E` is 17.60x denser inside boxes, and the raw `P(E|S)` is **31.5%
+   inside against 29.8% outside** -- flat, slightly favouring inside. §25.4 scores the
+   pre-registered prediction as **not supported** and withdraws the stronger reading.
+   An exploratory finding replaces it at exploratory strength: `E` is ~19x **less
+   foreground-selective** than `S` (`S` concentrates into object regions 306x, `E` only
+   16x; E:S is 5.586 in background against 0.568 inside, 166/179 videos, p 5.6e-35).
+   Its confirmatory test is the noise condition and is not yet run.
+
+   **Second result, same arm: the effect is stronger the less the scene changes.**
    Enrichment versus `foreground_density` gives Spearman **rho = −0.731** (n = 20,
    p ~ 0.0003), a log-log slope of **−0.54** (about −71% per 10x busier scene), and it
    survives the support-size confound — controlling for `S_claimed_px` the partial is

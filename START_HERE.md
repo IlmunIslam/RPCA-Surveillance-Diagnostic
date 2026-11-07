@@ -12,7 +12,7 @@ paper that received a major revision.
 
 **The contribution:** in a three-component decomposition `X = L + S + E`, the term
 designated for **noise** becomes a **misfit sink** when that noise is absent, and the
-sink coincides with the **sparse** term more completely the emptier the scene.
+sink coincides with the **sparse** term more completely the less temporal change the scene contains.
 **SS-RTD is the instrument, not the subject.**
 
 The *experiment* is a domain-transfer test: a method designed and validated on smooth
@@ -92,7 +92,15 @@ independent:
   is withdrawn, §20.7a). Raising `lambda` transfers the shared structure to `E`
   rather than removing it, and `E` overshoots. `lambda = 0.4` (the paper's own value) is near the
   **conservative** end.
-- **Dose-response:** the effect is *stronger the emptier the scene* — Spearman
+- ⚠️ **The predictor is TEMPORAL CHANGE, not emptiness** (§24 pre-specified, §25
+  result): VIRAT's ground-truth boxes show `foreground_density` is **not** an occupancy
+  proxy (Spearman +0.382, Pearson −0.057). The dose-response survives the swap
+  (ρ −0.329 vs occupancy, p 6e-06) so the claim is **weakened, not dropped**, but the
+  predictor must be described as what it measures. ❌ And the coincidence is **not**
+  localised to background: the 14.71x inside/outside gap is entirely enrichment's
+  denominator, raw P(E|S) being 31.5% inside against 29.8% outside (§25.4, a
+  pre-registered prediction scored NOT SUPPORTED).
+- **Dose-response:** the effect is *stronger the less the scene changes* — Spearman
   **−0.508** against `foreground_density` over 180 videos (p ~ 3.3e-13), with the
   same decay *rate* in both groups (log-log slope −0.517 vs −0.537). It holds at all
   five `lambda` points and strengthens with `lambda` (ρ −0.564 → −0.801), and it
@@ -112,7 +120,7 @@ independent:
 **Framing** (`PAPER_NOTES.md`, framing section): the contribution is **not** "SS-RTD
 does not transfer". It is that a three-component model's designated noise term becomes
 a **misfit sink** when that noise is absent, and the sink coincides with the sparse
-term more completely the emptier the scene. **SS-RTD is the instrument, not the
+term more completely the less temporal change the scene contains. **SS-RTD is the instrument, not the
 subject.** ✅ The five passages that read the other way round were **rewritten
 2026-11-07**; the transfer question is demoted to a description of the experiment, not
 deleted, since it remains accurate at that level. `RESEARCH_LOG.md` §7.4 was
