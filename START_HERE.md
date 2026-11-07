@@ -42,7 +42,7 @@ all VIRAT runs** — it fits Fig. 3 better and matches Appendix A. ⚠️ The co
 done: peak **2,663 MB**, ~22-26 min per video, every change verified **bitwise**
 (§7.1-§7.7).
 
-### Phase 3 batch: ✅ **COMPLETE — 300 / 300 runs** (finished 2026-11-06 22:19)
+### Phase 3 batch: ✅ **COMPLETE — 320 / 320 runs** (finished 2026-11-07 16:33)
 
 | arm | runs | status | where |
 |---|---|---|---|
@@ -50,7 +50,8 @@ done: peak **2,663 MB**, ~22-26 min per video, every change verified **bitwise**
 | `noise-subset` | 20 / 20 | ✅ complete | §12 |
 | `factor2-subset` | 20 / 20 | ✅ complete | §14 |
 | `clean-rest` | 160 / 160 | ✅ complete | §19 (supersedes §15) |
-| `lambda-sweep` | 80 / 80 | ✅ complete | §20 |
+| `lambda-sweep` | 80 / 80 | ✅ complete | §20 (+ §20.7 corrections) |
+| `noise-sweep` | 20 / 20 | ✅ complete | §21 pre-reg → §22 result |
 
 **Zero runs failed outstanding.** The nine FAILED entries in `logs/phase3_errors.log`
 are the 2026-10-20 logoff (§13, eight, computed nothing) and `video_87`'s 2026-11-03
@@ -69,6 +70,12 @@ independent:
   the 160 selected by nothing** — the effect is *larger* outside the subset, so
   selection cannot explain it, and there is **no selection effect to disclose**
   (§15.2's n=54 gap is withdrawn: p = 0.916, sign reversed).
+- **The "`E` is just idle" rival is refuted by a pre-registered test** (§21 → §22):
+  under 10% impulse noise, on uncorrupted voxels, the paired `lambda` 0.4→1.0
+  enrichment slope is **1.263x against 1.267x clean** — a 0.3% difference, 17/20
+  videos rising, p 2.6e-03 — while `E`'s noise work stays **independent** of `S`
+  (0.99x on corrupted voxels). Registered before the data existed, in commit
+  `63913fb`. ⚠️ It refutes one rival; it does not prove the mechanism.
 - **Survives `lambda`, and is not flat** (§20): **96 / 96 defined runs above 1** across
   `lambda` in [0.2, 1], median enrichment rising **29.4x → 55.0x**. The mechanism is in
   the component columns — `S`'s claimed voxels fall 6.1x while `E`'s share rises 2.8x
@@ -112,10 +119,10 @@ Open work, in the order it is worth doing:
    framing section and deliberately not yet rewritten. This is now the only thing
    between the record and the manuscript, and the author has stated the correct
    framing: **SS-RTD is the instrument, not the subject.**
-2. **Optional follow-up the sweep itself generated** (§20.6): the noise condition at
-   `lambda` 0.2 and 1.0, 20 videos, 40 runs, ~17 h. §20.2 predicts the transfer should
-   be **weaker** on noisy input, because `E` there has real noise to account for. That
-   is a falsifiable prediction, not a robustness check. Author's call.
+2. ~~The noise follow-up~~ — **DONE** (§21 pre-registered, §22 result). 20 runs, not
+   40: the ambiguous band that would have triggered `lambda` 0.2 was not hit. The
+   "`E` is just idle" objection is refuted (paired slope 1.263x under noise against
+   1.267x clean, 17/20 rising, p 2.6e-03).
 3. **Known-untested paths**, recorded rather than fixed: the runner's disk guard (no
    `--min-free-gb` override exists to exercise it) and `README.md` / `ssrtd.py`
    docstring cleanup. See `PHASE3_NOTES.md`.

@@ -537,11 +537,34 @@ It is the wrong description of the *contribution*.
    videos moving the same way at each point**. Which videos enrich most is a property
    of the scene, not of `lambda` (rank rho +0.93 to +0.99 against the 0.4 ordering).
 
-   Remaining caveats, now the honest full list: clean input so `E` has no designated
-   job (corroborated by the noise condition — see the decomposition above and
-   `RESEARCH_LOG.md` §8); the `lambda` sweep is on the 20-video subset, not all 180;
-   no ground truth; and voxels are spatially autocorrelated, so the videos are the
-   sample, not the voxels.
+   ✅ **THE "`E` IS JUST IDLE" OBJECTION IS ANSWERED BY A PRE-REGISTERED TEST**
+   (`RESEARCH_LOG.md` §21 registered 2026-11-06 23:52 UTC in commit `63913fb`, before
+   the arm existed; §22 reports it). The standing reviewer objection — *`E` lands on
+   background edges only because, on clean input, it has nothing better to do* — makes
+   a falsifiable prediction: give `E` real noise on 10% of voxels and its absorption of
+   what `S` gives up as `lambda` rises should vanish. It does not.
+
+   | paired `lambda` 0.4 → 1.0 enrichment ratio | geo-mean | 95% CI | rising | p |
+   |---|---|---|---|---|
+   | clean (reference) | **1.267x** | 1.141–1.407 | 17/20 | 2.6e-03 |
+   | impulse10, **uncorrupted voxels** | **1.263x** | 1.151–1.387 | 17/20 | 2.6e-03 |
+
+   The two slopes differ by **0.3%**. The pre-registered bar was ≥ 1.15x with ≥ 16/20
+   rising; the falsification boundary was ≤ 14/20 or < 1.10x. Meanwhile `E`'s noise
+   work stays **independent** of `S` — enrichment on *corrupted* voxels is 0.987x at
+   `lambda` 0.4 and 0.994x at 1.0. **`E` does both jobs at once because they do not
+   compete:** its update is an elementwise soft-threshold and the impulse noise is
+   spatially independent of `S`'s support. Report it at the registered strength: this
+   **refutes one rival**, it does not prove the mechanism, and it was powered to
+   separate *preserved* from *abolished*, not from *slightly damped* — so quote the
+   CI, not the 0.3% agreement.
+
+   Remaining caveats, now the honest full list: the `lambda` sweep and the
+   pre-registered test are on the 20-video subset, not all 180; no ground truth, so
+   the one untested alternative is enrichment inside versus outside the annotation
+   boxes (§10.3); `E` having no designated job is now **tested** rather than merely
+   corroborated (§22), but the 10% impulse model is one noise type, not a survey; and
+   voxels are spatially autocorrelated, so the videos are the sample, not the voxels.
    *[RESEARCH_LOG.md §7.4, §6.6; `results/scratch/measure_virat_one_after_lever_E/`,
    `results/scratch/measure_virat_one_fullspectrum/`]*
 

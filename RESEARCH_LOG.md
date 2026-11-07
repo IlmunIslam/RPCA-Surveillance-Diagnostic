@@ -1941,6 +1941,97 @@ existing 0.4 plus one extreme would do at half cost. **Half cost is right.**
 
 Cost: 20 runs, ~8.5 h at the observed ~25.5 min/run.
 
+## 22. RESULT of the §21 pre-registered test: H1 holds, H0 refuted, 2026-11-07
+
+Arm `noise-sweep` finished 2026-11-07 16:33:46: **20 ok, 0 adopted, 0 failed**, CSV at
+**320/320**. Analysis is exactly the procedure fixed in §21.4 before the arm ran --
+primary threshold 0.01, uncorrupted voxels only, paired within-video, sign test. No
+statistic was chosen after seeing the data.
+
+### 22.1 The primary readout
+
+| condition | lam 0.4 | lam 1.0 | **paired ratio** | 95% CI | rising | sign-test p |
+|---|---|---|---|---|---|---|
+| clean (reference, all voxels) | 4.73x | 5.82x | **1.267x** geo-mean | 1.141-1.407 | 17/20 | 2.58e-03 |
+| **impulse10 (uncorrupted voxels)** | 5.00x | 6.13x | **1.263x** geo-mean | 1.151-1.387 | **17/20** | **2.58e-03** |
+
+**H1's pre-registered bar was `>= 1.15x` geometric mean with `>= 16/20` rising. Both
+are met.** H0 predicted ~1.0x and ~10/20; the observed 17/20 has p = 2.6e-03 against
+it. The pre-registered falsification boundary (<= 14/20, or geometric mean < 1.10x)
+is nowhere near.
+
+The clean and noise slopes differ by **0.3%** (1.267x against 1.263x), with almost
+coincident confidence intervals. The effect does not care whether `E` has real noise
+to account for.
+
+Secondary readout, threshold 0.05, as specified non-deciding: clean **1.424x**
+(16/17 rising), noise **1.397x** (15/16 rising, p = 5.19e-04). Same answer.
+
+### 22.2 Five controls, all consistent
+
+1. **Corrupted voxels stay at independence, at both lambda.** Enrichment on the
+   corrupted population is **0.987x** at lam 0.4 and **0.994x** at lam 1.0
+   (threshold 0.01). §12 measured 0.99x at lam 0.4 only; it now holds at the far
+   lambda too. This is the control that matters most: the rise is specific to the
+   *uncorrupted* population, so the mask split is doing real work rather than
+   manufacturing the result. `E`'s noise-detection work remains statistically
+   independent of `S` throughout.
+2. **The confound was real and the test survived it.** `beta_X` noise/clean is 0.652
+   at lam 0.4 and 0.745 at lam 1.0, i.e. `E`'s effective threshold ran **1.53x and
+   1.34x higher** under noise. §21.2's bound -- that a 5x threshold change moves this
+   statistic 4% -- was the reason the test was interpretable, and it held.
+3. **The same videos rise by the same amount in both conditions.** Rank correlation
+   between the per-video clean and noise lambda-ratios: **rho +0.806** (threshold
+   0.01, n=20) and **+0.906** (threshold 0.05, n=16).
+4. **Annihilation is marginally worse under noise:** 4 videos lose `S` entirely at
+   lam 1.0 / threshold 0.05 (`video_104`, `video_165`, `video_26`, `video_54`) against
+   3 on clean -- `video_165` is the only addition. n=1 difference; not a finding, and
+   the primary readout at threshold 0.01 has no annihilation in either condition.
+5. **The §12 level result replicates at the far lambda.** Clean against noise
+   (uncorrupted): 40.42x vs 41.88x at lam 0.4 (rank rho +0.994) and **54.82x vs
+   58.28x at lam 1.0 (rank rho +1.000)**.
+
+### 22.3 One small anomaly, flagged and not claimed
+
+Noise-condition enrichment is consistently **~3-8% higher** than clean in all four
+cells (5.00 vs 4.73; 6.13 vs 5.82; 41.88 vs 40.42; 58.28 vs 54.82). The direction is
+the same every time, which makes it unlikely to be sampling noise, but the magnitude
+is within what control 2's threshold difference could produce on its own. **No claim
+is made about it.** It is recorded so that nobody later reports it as an effect
+without testing it, and the test would be the matched-threshold instrumentation that
+§20.7b showed does not exist in the stored artifacts.
+
+### 22.4 What this earns the manuscript, stated at the registered strength
+
+The standing objection to the paper's central claim -- *"`E` only lands on background
+edges because, on clean input, it has nothing better to do"* -- now has a direct
+answer. Give `E` real work on 10% of voxels, and on the remaining 90% its absorption
+of what `S` gives up as lambda rises is **statistically indistinguishable from the
+clean case** (1.263x vs 1.267x), while its noise work stays independent of `S`
+(0.99x). The sink is not idleness. `E` does both jobs at once because they are not in
+competition: its update is an elementwise soft-threshold, and the impulse noise is
+spatially independent of `S`'s support.
+
+What this does **not** establish, per §21.5 and unchanged by the result:
+
+- It is a **registered null for H1**, so it refutes one rival rather than proving the
+  mechanism. Said plainly in the paper.
+- It was powered to separate *preserved* from *abolished*, not from *slightly damped*;
+  a ~20% attenuation would have been invisible at n=20, and the 0.3% agreement
+  observed should not be quoted as evidence of exact equality. The CI is the honest
+  summary: **[1.151, 1.387]** under noise.
+- The remaining untested alternative is still untested: enrichment inside versus
+  outside the annotation boxes (§10.3), which needs ground-truth boxes, not more runs.
+- lambda 0.2 was held in reserve for the ambiguous band (§21.4). **The band was not
+  hit, so it is not run.** 20 runs were spent, not 40.
+
+### 22.5 Phase 3 final state
+
+**320/320 runs, six arms, zero failures outstanding.** Nothing is queued. The record
+now carries one pre-registered prediction, its timestamped commit (`63913fb`), and
+its result -- which is the strongest form the edge-sharing claim can take without
+ground-truth annotations.
+
 ## Verification provenance
 
 Facts above were checked with, and are reproducible via:
