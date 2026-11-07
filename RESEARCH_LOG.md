@@ -2115,6 +2115,133 @@ research log is for. The same applies to §8's phrasing and to every earlier sec
 that uses the transfer framing: **they are history, not current claims.**
 `IMPLEMENTATION_PLAN.md`'s "smooth-vs-sharp figures" is a filename and is left alone.
 
+## 24. PRE-SPECIFIED: annotation validation of `foreground_density`, and the inside/outside-box mechanism test, 2026-11-07 UTC
+
+**Written and committed BEFORE either analysis is run**, same discipline as §21, on the
+author's instruction: "the definition goes in the record first so the result can't be
+tuned by redefining the measure." Everything below was decided from annotation *format
+and coverage* only -- no occupancy value, correlation or enrichment was computed first.
+
+Why this is first in Phase 5: the dose-response (§19, §20) is the paper's second
+strongest claim and the only one with no internal control, and it rests entirely on
+`foreground_density` meaning *how much real foreground is in the scene*. It does not
+measure that. Per `src/metrics.py:55` it is the mean fraction of pixels whose deviation
+from the **temporal median** exceeds 0.1 -- a change detector. It responds to
+illumination drift, shadows, foliage, camera shake and compression artifacts, and on a
+near-empty plaza it can be driven almost entirely by sensor noise. Since `S_claimed_px`
+is *also* a measure of temporal change computed from the same pixels, the dose-response
+may in part be **two change detectors correlating with each other**, with the causal
+story supplied by us. The annotations are the only independent measure of scene content
+available, and they cost no new compute.
+
+### 24.1 Coverage -- checked first, because it decides feasibility
+
+| fact | value |
+|---|---|
+| annotation files | 987 total; **329** `*.viratdata.objects.txt` |
+| matched to our 180 videos | **180 / 180 by exact filename** (no prefix or scene-id guessing) |
+| videos with >= 1 annotation row in frames 0-299 | **180 / 180** (min 251 rows, median 2,028, max 26,904) |
+| first annotated frame, every video | **0** |
+| frame-index convention | `max_annotated_frame + 1 == total_frames`, verified on 40 videos -- annotations are 0-based and align with decode order |
+| resolution | **uniform 1280x720**, all 180, 23.97 fps, all >= 300 frames |
+| boxes out of bounds in frames 0-299 | **0** (and 0 negative coordinates) |
+| object types present | 1 person (1,103,191 rows), 2 car (2,868,856), 4 object (41,580), 5 bike (24,643). No type 3, no type 0. |
+
+**The author's coverage worry does not materialise: both analyses are feasible on all
+180 videos.** This is recorded because the opposite was the expected answer.
+
+### 24.2 Definition of box-derived occupancy -- fixed before computing
+
+**Which frames.** Exactly frames **0-299 inclusive**, matching
+`load_video_frames(max_frames=300)`, which reads sequentially from frame 0.
+
+**Box to grid mapping.** The resize is `cv2.resize(gray, (320,180), INTER_AREA)` from
+1280x720, an exact 4x downscale on both axes, so a box maps by dividing by 4:
+
+    x0 = floor(x / 4),  x1 = ceil((x + w) / 4)
+    y0 = floor(y / 4),  y1 = ceil((y + h) / 4)
+
+then clipped to `[0,320) x [0,180)`. `floor`/`ceil` makes a box cover every pixel it
+*partially* overlaps. This is deliberately the conservative direction: it **inflates**
+occupancy, which biases **against** finding scenes empty, that is, against our own
+hypothesis. Rows with `w <= 0` or `h <= 0` are dropped.
+
+**What counts as an object.** **All four annotated types (1, 2, 4, 5).** The claim under
+test is about how much real foreground *content* the scene holds, not how much of it
+moves -- a parked car is foreground content that `S` could legitimately claim. This
+choice is made knowing it creates a specific disagreement with `foreground_density`,
+which being median-deviation-based ignores a stationary car entirely. **That
+disagreement is a result, not a problem to be tuned away.**
+
+Pre-declared **diagnostic, not an alternative primary**: occupancy restricted to objects
+whose box centre displaces more than 2 grid pixels over its own track, computed from
+annotations alone. Its only licensed use is to *explain* a divergence found under the
+primary definition. It may **not** be substituted for the primary to rescue agreement.
+
+**Area, not presence.** `foreground_density` is a pixel fraction, so the comparable
+quantity is an area fraction:
+
+> **`box_occupancy`** = mean over frames 0-299 of (number of grid cells covered by
+> **at least one** box) / 57,600, as a percentage.
+
+Union, not sum, so overlapping boxes are not double counted. Object count per frame is
+recorded as a descriptive column only.
+
+**Frames with no annotation rows contribute 0, and are NOT skipped.** In VIRAT, with
+coverage starting at frame 0 in every video (24.1), an absent row means no annotated
+object, which is genuine emptiness rather than missing data. Skipping such frames would
+inflate occupancy precisely on the emptiest videos -- the ones driving the dose-response
+-- so it would manufacture the agreement this analysis exists to test. The per-video
+count of zero-object frames is reported beside the measure so the reader can see how
+much of it is genuine zeros.
+
+**Agreement threshold, fixed now:** Spearman rho between `box_occupancy` and
+`foreground_density` across the 180 videos, with **rho >= +0.70 counting as agreement**,
+and the decisive quantity being the **dose-response recomputed against `box_occupancy`**
+(enrichment vs occupancy, Spearman, all 180, thresholds 0.05 and 0.01).
+
+### 24.3 What each outcome means -- written before the data
+
+| outcome | criterion | what the claim becomes |
+|---|---|---|
+| **A. secured** | rho >= +0.70 **and** enrichment-vs-occupancy rho negative and within ~0.15 of the -0.508 against `foreground_density` | §23.1's fourth clause stands **as written**: "more completely the emptier the scene". `foreground_density` is a validated occupancy proxy on this corpus, and the dose-response has the independent control it currently lacks. |
+| **B. diverges at the empty end** | overall rho acceptable but the lowest-`foreground_density` videos are not the lowest-occupancy, **or** enrichment-vs-occupancy rho materially weaker | **Weakened version, written now:** "the sink coincides with the sparse term more completely as *measured temporal change* in the scene decreases. Whether that reflects object occupancy is not established: on this corpus the two diverge at the empty end, where `foreground_density` is dominated by non-object change." The contribution's fourth clause changes from **"the emptier the scene"** to **"the less temporal change the scene contains"**, and the occupancy question is stated as open, not answered. |
+| **C. no relation** | rho < +0.40, **or** enrichment-vs-occupancy null | The dose-response is **not about scene content**. The fourth clause is **dropped from the contribution** and demoted to a reported correlation with a motion statistic. The mechanism claim then rests on §20 (the lambda transfer) and §22 (the idleness refutation) alone. A material weakening of the paper, and it would be reported as one. |
+| **D. occupancy is the better predictor** | enrichment-vs-occupancy rho *stronger* than -0.508 | Switch predictors: report occupancy as primary and `foreground_density` as the convenient proxy, with both. The claim **strengthens** and becomes about annotated object content directly. |
+
+No outcome permits re-deriving `box_occupancy` under a different definition. If the
+primary definition turns out to be the wrong question, that is reported as a limitation
+and the new question is a separate, separately-specified analysis.
+
+### 24.4 Second analysis: enrichment inside versus outside the boxes (§10.3's direct test)
+
+**Feasible here with no new compute**, which §10.3 did not establish: per-voxel `S` and
+`E` supports are bit-packed in every run's `supports.npz` on the same 180x320x300 grid,
+and the box mask can be built on that grid from the annotations. Run on **all 180 clean
+`factor=1.0`, `lambda=0.4` runs** (`clean-subset` + `clean-rest`).
+
+Build `B[y, x, t]` = covered by at least one box at frame `t`, by 24.2's mapping. Then
+compute enrichment separately on `B` (inside) and `~B` (outside), each normalised within
+its own population, at thresholds 0.05 and 0.01.
+
+**Pre-registered directional prediction.** The mechanism says `E` lands on sharp
+**background** edges that `S` also claims. Outside the boxes *is* background. So:
+
+> **enrichment OUTSIDE the boxes > enrichment INSIDE**, on a majority of the 180 videos.
+
+- Confirmed: the "background edge" account is supported, and the dose-response gains a
+  mechanism rather than just a correlation.
+- **Uniform inside and outside** (ratio ~1.0): the background-edge story is **wrong** --
+  the coincidence is global and not edge-localised. This would be the most damaging
+  result available in the current record, and it is cheap to obtain, which is the
+  argument for running it now rather than after submission.
+- **Higher INSIDE**: the account inverts -- `E` would be duplicating real foreground, not
+  background structure -- and §23.1 would need rewriting, not weakening.
+
+Reported with the same restraint as §22: this tests one directional consequence of the
+mechanism, and confirming it refutes the alternatives above rather than proving the
+mechanism.
+
 ## Verification provenance
 
 Facts above were checked with, and are reproducible via:
