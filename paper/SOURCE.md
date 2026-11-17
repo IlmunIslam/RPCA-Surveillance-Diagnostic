@@ -45,6 +45,14 @@ be re-obtained from the DOI above.
 
 ## Method summary (for verification against our code)
 
+> ⚠️ **PROVISIONAL AGAINST THE ISSUE VERSION (2026-11-18).** Every "verified against the
+> paper" claim in this project means **verified against the early-access PDF** (pages 1-14,
+> `(c)2022`), not the vol. 20, no. 1 issue version a reviewer will read (`RESEARCH_LOG.md`
+> §29.2). Until every row of [`paper/ISSUE_VERSION_CHECKLIST.md`](ISSUE_VERSION_CHECKLIST.md)
+> is confirmed, the four rigor findings about the source paper are **provisional**: the
+> rank rule (PAPER_NOTES item 1), eq. (12) vs Appendix A (item 11), Algorithm 1's stop
+> rule (item 14) and the PSNR formula (item 15).
+
 Verified verbatim against the PDF on 2026-09-07. Section and equation numbers
 refer to the early-access version of the article (see above; §29.2).
 

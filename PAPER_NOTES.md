@@ -59,6 +59,16 @@ framing — see §23.3.
 
 ## For the Methodology section (deviations that must be disclosed)
 
+> ⚠️ **PROVISIONAL AGAINST THE ISSUE VERSION (2026-11-18).** Every "verified against the
+> paper" claim in this project means **verified against the early-access PDF** (pages 1-14,
+> `(c)2022`), not the vol. 20, no. 1 issue version a reviewer will read (`RESEARCH_LOG.md`
+> §29.2). Until every row of [`paper/ISSUE_VERSION_CHECKLIST.md`](paper/ISSUE_VERSION_CHECKLIST.md)
+> is confirmed, the four rigor findings about the source paper are **provisional**: the
+> rank rule (item 1), eq. (12) vs Appendix A (item 11), Algorithm 1's stop
+> rule (item 14) and the PSNR formula (item 15).
+> The same applies to item 16's Fig. 3 reproduction and the Table I comparison: both
+> targets were read from the early-access figures and table.
+
 1. **RANK RULE INFEASIBILITY.** The paper's rank rule
    (`r1 = ceil(0.8H)`, `r2 = ceil(0.8W)`, `r3 = 1`) is mathematically infeasible
    for non-square frames — `r3 = 1` forces `r1 = r2`. We clamp to attainable
@@ -201,7 +211,9 @@ framing — see §23.3.
    definition. One methodology sentence.
    *[paper §IV, "Performance evaluation indices"; Table I; `src/gate_candela.py`]*
 
-   **Running tally of source-paper inconsistencies** (for the rigor paragraph):
+   **Running tally of source-paper inconsistencies** (for the rigor paragraph; ⚠️ all four
+   **provisional** until checked against the issue version, see the note at the head of
+   this section):
    item 1 (rank rule infeasible for non-square frames), item 11 (E-threshold
    `2/beta_X` vs Appendix A's `1/beta_X`), item 14 (stopping rule halts after one
    iteration), item 15 (PSNR formula). Plus disclosed inferences where the paper is

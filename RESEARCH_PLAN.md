@@ -13,8 +13,10 @@ mislabeling.
 
 **Contribution (the claim the paper makes):** in a three-component decomposition
 `X = L + S + E`, the term designated for NOISE becomes a MISFIT SINK when that noise is
-absent, and the sink coincides with the SPARSE term more completely the emptier the
-scene. **SS-RTD is the instrument, not the subject.**
+absent, and the sink coincides with the SPARSE term more completely ~~the emptier the
+scene~~ the less temporal change the scene contains. ⚠️ *Superseded 2026-11-18
+(`RESEARCH_LOG.md` §30.2): `foreground_density` is not an occupancy proxy (§25.1); the
+clause was revised in §23.1 on 2026-11-07 and this copy was missed.* **SS-RTD is the instrument, not the subject.**
 
 **Research question (the experiment that establishes it):** does SS-RTD — designed and
 validated for SMOOTH X-ray foreground — transfer to SHARP-EDGED surveillance foreground?
@@ -76,7 +78,14 @@ Essential figures:
    scientifically meaningful replacement for the old two-parameter sweep.
 5. **THE MISFIT SINK, SHOWN DIRECTLY (most compelling)** — real SS-RTD on a smooth
    dataset (Candela), where `E` has designated noise to represent, beside real SS-RTD on
-   a sharp VIRAT video, where it has none and lands on `S`'s background edges instead.
+   a sharp VIRAT video, where it has none and ~~lands on `S`'s background edges instead~~
+   claims `S`'s support instead.
+   ⚠️ *Superseded 2026-11-18 (`RESEARCH_LOG.md` §30.2), two corrections to this spec:
+   (1) "background edges" was withdrawn in §25.4. (2) **The premise is not established:**
+   on the gate run `E` is 74.6% nonzero and only 13.4% of its nonzeros are real noise
+   (factor 1.0, §6.1), so "on Candela, `E` holds the noise" is not yet true in the
+   record. A thresholded Candela `E`-precision is needed before this figure is designed
+   (`MANUSCRIPT_NUMBERS.md` A24).*
    The smooth-vs-sharp contrast is the *vehicle*; what the figure shows is the noise term
    becoming a sink. Label it as the latter.
 6. **BASELINE COMPARISON** — real SS-RTD (with TV) vs the naive no-TV three-component

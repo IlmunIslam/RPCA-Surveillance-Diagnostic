@@ -29,8 +29,8 @@ still says it. Those are the places most likely to leak into prose.
 
 | # | plausible sentence | why it is wrong | correct form | live copies still saying it |
 |---|---|---|---|---|
-| A1 | "...more completely **the emptier the scene**" / "with **scene occupancy**" | `foreground_density` is not an occupancy proxy: ρ +0.382 vs annotated `box_occupancy`, Pearson −0.057 (§25.1) | "...the less **temporal change** the scene contains"; describe the predictor as a median-deviation change detector | 🔴 **`RESEARCH_PLAN.md:16-17`**, missed in the §25 sweep. History-only: §19.1 ("weakens monotonically with scene occupancy"), §10.3 title |
-| A2 | "`E` lands on the sharp **background** edges", "the coincidence is **localised to background**", "`S` is penalised out of the **background** edges and `E` takes them over" | the 14.71x inside/outside gap is entirely enrichment's denominator; raw `P(E\|S)` is 31.5% inside boxes vs 29.8% outside (§25.4) | "`S`-membership predicts `E`-membership far above chance" (enrichment); if location is needed, use §25.6 (exploratory): `E`'s **mass** is less foreground-selective than `S`'s | ✅ §23.1 row 1 and `PAPER_NOTES` item 18 superseded 2026-11-18 (§29.3). Still live: 🔴 `START_HERE.md:72-73`; 🔴 `RESEARCH_PLAN.md:79` (Figure 5's spec) |
+| A1 | "...more completely **the emptier the scene**" / "with **scene occupancy**" | `foreground_density` is not an occupancy proxy: ρ +0.382 vs annotated `box_occupancy`, Pearson −0.057 (§25.1) | "...the less **temporal change** the scene contains"; describe the predictor as a median-deviation change detector | ✅ `RESEARCH_PLAN.md:16-17` superseded 2026-11-18 (§30.2). History-only: §19.1 ("weakens monotonically with scene occupancy"), §10.3 title |
+| A2 | "`E` lands on the sharp **background** edges", "the coincidence is **localised to background**", "`S` is penalised out of the **background** edges and `E` takes them over" | the 14.71x inside/outside gap is entirely enrichment's denominator; raw `P(E\|S)` is 31.5% inside boxes vs 29.8% outside (§25.4) | "`S`-membership predicts `E`-membership far above chance" (enrichment); if location is needed, use §25.6 (exploratory): `E`'s **mass** is less foreground-selective than `S`'s | ✅ §23.1 row 1 and `PAPER_NOTES` item 18 superseded 2026-11-18 (§29.3). ✅ `START_HERE.md:72-73` and `RESEARCH_PLAN.md:79` superseded 2026-11-18 (§30.2). No live copies |
 | A3 | "the sum of `S` and `E` is (nearly) **conserved**" / "a one-for-one handoff" | per video the sum rises 1.257x (0.27–1.56x); 2/20 within ±10% (§20.7a) | "`E` gains about **twice** what `S` loses" | none live. §20.2 is struck through correctly |
 | A4 | "a transfer coefficient of ~2" as a characteristic number | τ spread is 0.2–12.5 per video (§20.7a) | the median with its spread, or not at all | none |
 | A5 | "`E`'s precision tracks scene emptiness" | ρ −0.764 at n=11 → −0.248 (p≈0.29) at n=20 (§12.2) | precision 0.628–0.996, median 0.925, driver unexplained | none |
@@ -47,16 +47,22 @@ still says it. Those are the places most likely to leak into prose.
 | A16 | "`E` is ~19x less foreground-selective than `S`" as a finding | exploratory; its existence cannot be confirmed on this data (§26.1(3)); threshold-sensitive (>1 on only 15/20 noise-subset videos at 0.01) | exploratory, if at all | — |
 | A17 | "the dose-response is ρ −0.731 / slope −0.54" | the 20-video subset; superseded by 180 videos (§19.1) | ρ −0.508, slopes −0.517 / −0.537 | ✅ `PAPER_NOTES` framing section updated 2026-11-18 (§29.3) |
 | A18 | "**the** untested alternative is enrichment inside vs outside the boxes" | tested in §25.4, not supported | — | ✅ both `PAPER_NOTES` copies superseded 2026-11-18 (§29.3); §22.4 (history) |
-| A19 | "`S` and `E` share the sharp **edges**" as a measured fact | "edges" is a visual reading of one video (§7.4). The measurement is support co-occurrence (enrichment), never an edge measure | "the supports of `S` and `E` coincide far above chance"; "edges" only when describing a figure | ✅ `PAPER_NOTES` item 18 heading superseded 2026-11-18 (§29.3). Still live: `START_HERE.md:72` |
+| A19 | "`S` and `E` share the sharp **edges**" as a measured fact | "edges" is a visual reading of one video (§7.4). The measurement is support co-occurrence (enrichment), never an edge measure | "the supports of `S` and `E` coincide far above chance"; "edges" only when describing a figure | ✅ `PAPER_NOTES` item 18 heading superseded 2026-11-18 (§29.3). ✅ `START_HERE.md:72` superseded 2026-11-18 (§30.2). No live copies |
 | A20 | "the claim holds for **any** `L+S+E` decomposition" as shown | argued from the update's form (elementwise L1 with no designated signal); measured on **one** instrument, SS-RTD. The naive baseline was not tested for it | "we argue it applies to the model class; we measure it on SS-RTD" | §23.1 closing paragraph (as argument, fine) |
 | A21 | "trajectories are bitwise reproducible" | bitwise within one machine and FFT path; across FFT/BLAS builds only to reported precision (§6.6) | — | — |
 | A22 | "162 assertions" | was true at the gate; now **248** across seven suites (§7.7) | 248 | ✅ `PAPER_NOTES` item 16 updated 2026-11-18 (§29.3) |
 | A23 | "300/300 runs" | Phase 3 closed at **320/320**, six arms (§22.5) | 320 | ✅ `PAPER_NOTES` item 18 updated 2026-11-18 (§29.3) |
-| A24 | "on Candela, `E` holds the noise" (Figure 5's premise) | on the gate run only **13.4%** of `E`'s nonzeros are real noise at factor 1.0 (74.6% of pixels nonzero vs 10% corrupted) (§6.1) | see Figure 5 below | `RESEARCH_PLAN.md:77-79` |
+| A24 | "on Candela, `E` holds the noise" (Figure 5's premise) | on the gate run only **13.4%** of `E`'s nonzeros are real noise at factor 1.0 (74.6% of pixels nonzero vs 10% corrupted) (§6.1) | see Figure 5 below | ✅ `RESEARCH_PLAN.md` Figure 5 spec now flags the premise as unestablished (2026-11-18, §30.2); the measurement is still missing |
 
 ---
 
 ## B. Methodology: the source paper and the implementation
+
+> ⚠️ **Provisional against the issue version (2026-11-18, `RESEARCH_LOG.md` §30.1).** Every
+> row here that cites the source paper was checked against the **early-access** PDF.
+> That includes the rigor findings (rank rule, eq. (12) vs Appendix A, Algorithm 1's stop
+> rule, the PSNR formula), the Fig. 3 reproduction and Table I. Confirm each against
+> vol. 20, no. 1 using `paper/ISSUE_VERSION_CHECKLIST.md` before quoting it.
 
 | id | value | source | conditions | status |
 |---|---|---|---|---|

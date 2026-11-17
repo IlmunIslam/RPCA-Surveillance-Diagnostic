@@ -20,3 +20,6 @@ Robust_Tensor_Decomposition_Based_Background_Foreground_Separation_in_Noisy_Vide
 # git checkout cannot silently resurrect a kill switch or a stale stall counter.
 STOP_BATCH
 logs/watchdog_state.json
+
+# The author's Obsidian vault folder (its own notes, not part of the record).
+/Video Compression Research/

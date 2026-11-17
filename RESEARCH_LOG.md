@@ -2833,6 +2833,62 @@ Section-A row numbers refer to `MANUSCRIPT_NUMBERS.md`.
 - `START_HERE.md:72-73`, "background edges" (A2, A19)
 - `RESEARCH_PLAN.md:77-79`, Figure 5's premise (A2, A24)
 
+## 30. The issue-version checklist and three stale passages, 2026-11-18
+
+Both parts were done on the author's instruction. Neither changes a measured number.
+
+### 30.1 Everything "verified against the paper" refers to the early-access version
+
+§29.2 established that the PDF we hold is the **early-access** version. The equation
+transcription, the four rigor findings, the Fig. 3 target values and the Table I comparison
+were all checked against that text. The **issue version** (vol. 20, no. 1, 2023,
+pp. 583-596) has never been read.
+
+**`paper/ISSUE_VERSION_CHECKLIST.md`** lists, page by page against the early-access
+pagination, everything that must be confirmed once the issue version is in hand:
+
+| section | covers |
+|---|---|
+| 0 | citation and identity, including pages 583-596 |
+| 1 | every equation `SOURCE.md` transcribes or the code cites, eqs. (3)-(17), and their numbering |
+| 2 | Algorithm 1 |
+| 3 | §III-C implementation details and parameter ranges |
+| 4 | §IV evaluation definitions |
+| 5 | the convergence experiment and Fig. 3, including the 39 digitized points the gate uses |
+| 6 | Fig. 4 |
+| 7 | Table I |
+| 8 | Appendix A |
+| 9 | for each rigor finding and each disclosed inference, what in the issue version would invalidate it |
+| 10 | what to do after the check |
+
+The checklist does **not** guess what changed. It lists what must be confirmed.
+
+**Until the check is done:**
+- every "verified against the paper" claim in the record means **the early-access
+  version**;
+- the four rigor findings are **provisional against the issue version**:
+  - R1, the rank rule (`PAPER_NOTES` item 1);
+  - R2, eq. (12)'s 2/β_X against Appendix A's 1/β_X (item 11);
+  - R3, Algorithm 1's stop rule (item 14);
+  - R4, the PSNR formula (item 15).
+
+`paper/SOURCE.md` (under "Method summary") and `PAPER_NOTES.md` (under "For the
+Methodology section", and in the rigor tally) now carry this note. The same applies to
+item 16's Fig. 3 reproduction and to the Table I comparison.
+
+### 30.2 Three stale passages superseded (by author instruction)
+
+Same rule as §29.3: the old text is struck, with a superseding note beside it.
+
+| where | was | now | why |
+|---|---|---|---|
+| `START_HERE.md:72-73` | `E` "lands on the same sharp background edges `S` claims" | `E` claims the same voxels as `S` far more often than chance | "background" was withdrawn in §25.4. "Edges" was a visual reading of one frame (§7.4) (A2, A19) |
+| `RESEARCH_PLAN.md:16-17` | coincidence stronger "the emptier the scene" | "the less temporal change the scene contains" | `foreground_density` is not an occupancy proxy (§25.1) (A1) |
+| `RESEARCH_PLAN.md:77-79` (Figure 5 spec) | `E` "lands on `S`'s background edges instead" | "claims `S`'s support instead", plus a note | (1) background withdrawn, §25.4. (2) The figure's premise is **not established**: at factor 1.0 Candela's `E` is 74.6% nonzero and only 13.4% of its nonzeros are real noise (§6.1). A thresholded Candela `E`-precision is needed before the figure can be drawn (A24) |
+
+`MANUSCRIPT_NUMBERS.md` rows A1, A2, A19 and A24 are updated. A24's measurement is still
+missing.
+
 ## Verification provenance
 
 Facts above were checked with, and are reproducible via:

@@ -69,8 +69,12 @@ timeout, which was recomputed on the authorised restart and is now row 160 of
 
 ### The headline result so far
 
-`S` and `E` do not separate: `E`, the designated **noise** term, lands on the same
-sharp background edges `S` claims. Measured as **enrichment over independence**,
+`S` and `E` do not separate: ~~`E`, the designated **noise** term, lands on the same
+sharp background edges `S` claims.~~ `E`, the designated **noise** term, claims the same
+voxels as `S` far more often than chance. ⚠️ *Superseded 2026-11-18 (`RESEARCH_LOG.md`
+§30.2): "background" was withdrawn in §25.4 (the coincidence is not localised to
+background), and "edges" is a visual reading of one video (§7.4), never a measurement.*
+Measured as **enrichment over independence**,
 `P(E-claimed | S-claimed) / P(E-claimed)`, which is 1.0 if the supports are
 independent:
 
