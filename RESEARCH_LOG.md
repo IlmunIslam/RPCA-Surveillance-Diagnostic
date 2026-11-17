@@ -1074,7 +1074,7 @@ described as a conservative case rather than a representative one.
 | odds ratio vs density | rho -0.504 (p~0.024) |
 
 The obvious confound -- that this is only support size, since density and
-`S_claimed_px` are tightly coupled (rho +0.818) -- was tested and **pulls the opposite
+`S_claimed_px` are tightly coupled (rho +0.818 *[that value is from the first 10 videos; at n=20 it is **+0.976**, so the coupling is tighter than stated and the reading stands -- §30.3]*) -- was tested and **pulls the opposite
 way**: it suppresses the relationship rather than creating it.
 
 **Hypothesis for the mechanism** (not yet tested): in a near-empty scene almost all of
@@ -2739,7 +2739,7 @@ scripts. The 329 `objects.txt` files and everything after them are reproduced.
   repository. They include the 180-video headline in §19.1 (median 47.4x, rho -0.508)
   and the noise-arm numbers in §12. They can be recovered from the transcript the same
   way. **This matters more than anything moved today, because §19.1 holds the
-  manuscript's headline numbers.**
+  manuscript's headline numbers.** *[Closed 2026-11-18: all 16 recovered and reproduced, §30.3.]*
 - Analyses from before the 2026-08-29 transcript cannot be recovered this way; there is
   no transcript for that period.
 
@@ -2833,9 +2833,10 @@ Section-A row numbers refer to `MANUSCRIPT_NUMBERS.md`.
 - `START_HERE.md:72-73`, "background edges" (A2, A19)
 - `RESEARCH_PLAN.md:77-79`, Figure 5's premise (A2, A24)
 
-## 30. The issue-version checklist and three stale passages, 2026-11-18
+## 30. The issue-version checklist, the §9-§19 analysis code, and three stale passages, 2026-11-18
 
-Both parts were done on the author's instruction. Neither changes a measured number.
+All three parts were done on the author's instruction. None changes a measured number.
+30.3 corrects one quoted value (§10.3), which was an n=10 number in an n=20 section.
 
 ### 30.1 Everything "verified against the paper" refers to the early-access version
 
@@ -2888,6 +2889,91 @@ Same rule as §29.3: the old text is struck, with a superseding note beside it.
 
 `MANUSCRIPT_NUMBERS.md` rows A1, A2, A19 and A24 are updated. A24's measurement is still
 missing.
+
+### 30.3 The analysis code behind §9-§19 is now in the repository
+
+§28.4 left this open. The §9-§19 analyses ran as inline `python -c` scripts and were not
+in the repository. That includes **§19.1, the 180-video headline** (median 47.4x,
+rho -0.508). They are now 16 scripts in `src/analysis/`, recovered **verbatim** from the
+session transcript by the §28.1 method. The shell's double-quote escaping was undone
+exactly; none of the scripts contains a `$` or a backtick, so no shell expansion took
+place.
+
+**The one change beyond §28's header and working-directory lines: CSV pinning.** These
+scripts read the whole results CSV, which has grown since they ran. The CSV is
+append-only in completion order and has no timestamp column, so the CSV as it stood at a
+script's original run is exactly its first N rows. Where the full CSV no longer
+reproduces a script's output:
+- the only change is that the script's `open(...)` of the CSV becomes `_csv_as_of(...)`,
+  which returns the header plus the first `CSV_ROWS_AT_ORIGINAL_RUN` rows;
+- every N in the plausible window was tried, and the table gives every N that reproduces
+  the recorded output exactly;
+- the script is pinned to the largest matching N;
+- each pinned script says so in its header.
+
+Every script was then re-run as committed, and **all 16 are identical** to the output
+recorded in the transcript.
+
+| script | section(s) | CSV rows that reproduce | pinned |
+|---|---|---|---|
+| `s9_4_enrichment_smoke.py` | §9.4 (enrichment on the smoke run, clean vs impulse10, by voxel population) | reads the smoke run, not the CSV | -- |
+| `s10_1_absolute_counts.py` | §10.1 (absolute counts behind video_165's 199.8x) | full CSV | -- |
+| `s10_2_batch_vs_smoke_video01.py` | §10.2 (batch video_01 = smoke run) | 20, and the full CSV | -- |
+| `s10_3_mechanical_check.py` | §10.3, **run at 10 videos** (see below) | **10 only** | 10 |
+| `s10_3_partial_correlations.py` | §10.3, **run at 10 videos** | **10 only** | 10 |
+| `s10_3_odds_slope_pooled.py` | §10.3 (rho -0.731, slope -0.537, partials -0.529 / +0.357, OR rho -0.504, pooled without video_01 26.8x) | 20 only | 20 |
+| `s12_video173_clean_vs_noise.py` | §12, the first noise rows (video_173 clean vs impulse10) | 25-40 | 40 |
+| `s12_2_precision_at_n11.py` | §12.2's **retracted** n=11 precision claim, kept for the record | 31 only | 31 |
+| `s12_noise_arm_full.py` | §12.1-§12.2 (the full noise-subset arm, n=20) | 40-60 | 60 |
+| `s12_1_uncorrupted_enrichment.py` | §12.1 (enrichment on uncorrupted voxels, 20 noise runs) | 40 only | 40 |
+| `s14_video165_factor.py` | §14, the first factor-2 row (video_165, factor 1.0 vs 2.0) | 41-60 | 60 |
+| `s14_factor_paired.py` | §14.1-§14.2 (paired factor 1.0 vs 2.0, 20 videos) | 60 only | 60 |
+| `s15_1_rest_vs_subset_n54.py` | §15.1, **superseded by §19** (clean-rest at n=54) | 114 only | 114 |
+| `s15_2_density_band_n54.py` | §15.2, **superseded by §19** (common density band, n=54) | 114 only | 114 |
+| **`s19_1_clean_rest_full.py`** | **§19.1, the 180-video headline** | **230, and the full CSV** | -- |
+| `s19_2_rest_vs_subset_full.py` | §19.2 (subset vs rest at full n) | 230, and the full CSV | -- |
+
+**§19.1 reproduces on the current CSV with no pinning.** In the window 219-230 it
+reproduces at exactly **230** rows and at no smaller count. Row 230 is where the 160th
+clean-rest video landed. So the headline was computed on the complete arm, and nothing
+appended since (the lambda-sweep and noise-sweep arms) changes it.
+
+**The §12 windows.** §12 opened with the first noise rows on 2026-10-19 and was extended
+as the arm filled. The four §12 scripts reproduce at:
+- 25-40 rows;
+- 31 rows (the n=11 claim, retracted in §12.2);
+- 40 rows (the uncorrupted-voxel table);
+- 40-60 rows.
+Each is consistent with the arm's state at the time it ran.
+
+**One stale number found and annotated: §10.3's "rho +0.818".**
+- §10 is headed "20/20 runs". Its fg-vs-`S_claimed_px` coupling, "rho **+0.818**", comes
+  from `s10_3_mechanical_check.py`, which reproduces **only at 10 rows**: it ran at
+  08:27, when the arm was half done.
+- At n=20 the value is **+0.976**.
+- The sentence's claim is that density and support size are tightly coupled, so the
+  confound had to be tested. At n=20 that is more true, not less, and the conclusion
+  stands.
+- The value is annotated in place, with the old number kept.
+- The two 10-video scripts' other outputs (for example the partial rho -0.803 and the
+  enrichment rho -0.830) do not appear anywhere in the record. Every other §10.3 number
+  comes from the n=20 script and is correct as quoted.
+
+**The numbers that need no script:**
+- **§9.3** reads straight from columns the runner (`src/phase3_worker.py`) writes into
+  `results/scratch/phase3_smoke/smoke_results.csv`. Checked today: every §9.3 value
+  matches its column, including "99.62% of corruptions changed a value", which is
+  `noise_detectable_pct` 99.6184.
+- **§10.1's per-video table** comes from `src/phase3_checkpoint.py`, which has been in the
+  repository since `48032bf`. Re-run today on the current CSV, its 20 clean-subset rows
+  match the 2026-10-19 12:20 output exactly. Only the caption under the pooled line
+  differs; `4efe817` reworded it.
+
+**Not covered, and why:**
+- **§11, §13 and §16-§18** have nothing to recover. §11 is a design decision that cites
+  §9.4 and §10.3. §13 and §16-§18 are about watchdog and provenance operations.
+- **Analyses from before the transcript begins (2026-08-29)** cannot be recovered this
+  way, as §28.4 says.
 
 ## Verification provenance
 

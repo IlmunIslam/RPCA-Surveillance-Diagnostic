@@ -39,7 +39,7 @@
 | diagnostic probes | `src/probe_relchg_L.py`, `src/probe_gate_fullspectrum.py` | 2026-09-19 |
 | single-video measurement | `src/measure_virat_one.py` | 2026-09-18 |
 | **Phase 3 batch infrastructure** | `src/phase3_runner.py`, `src/phase3_worker.py`, `src/phase3_checkpoint.py`, `watchdog_phase3.ps1`, `watchdog_system.ps1`, `install_watchdog_task.ps1` | 2026-10-17 → 10-20 |
-| **analysis** | `src/prereg_s26_e_selectivity.py`; `src/analysis/` (15 scripts behind §20–§26, moved in from session scratch and the transcript on 2026-11-18; `RESEARCH_LOG.md` §28) | 2026-11 |
+| **analysis** | `src/prereg_s26_e_selectivity.py`; `src/analysis/` (31 scripts: 15 behind §20–§26 and 16 behind §9–§19, moved in from session scratch and the transcript on 2026-11-18; `RESEARCH_LOG.md` §28, §30.3) | 2026-11 |
 | reference checking | `src/verify_refs.py` | 2026-11-18 |
 | project configuration | `.claude/settings.json` (permission and deny rules) | 2026-09-19 |
 
@@ -47,8 +47,11 @@ Also edited by the agent: `src/tensor_rpca.py` (2 edits), `watchdog_param_sweep.
 
 ~~⚠️ **The scratch analysis scripts are a disclosure and reproducibility gap.**~~ Closed
 2026-11-18 for §20–§26: the scripts are in `src/analysis/`, each re-run and checked against its
-recorded output (`RESEARCH_LOG.md` §28). **Still open:** the inline analyses behind §9–§19
-(including the 180-video headline, §19.1) are not yet in the repo (§28.4).
+recorded output (`RESEARCH_LOG.md` §28). ~~**Still open:** the inline analyses behind §9–§19
+(including the 180-video headline, §19.1) are not yet in the repo (§28.4).~~ Closed
+2026-11-18 for §9–§19 too: 16 scripts, all re-run and identical to their recorded output.
+Where the results CSV has grown since a script ran, it is pinned to its row count at the time
+(§30.3). Analyses from before the transcript (2026-08-29) remain unrecoverable.
 
 ### 3b. Pre-pivot code (2026-06-07 → 07-07): authorship not determinable from local evidence
 

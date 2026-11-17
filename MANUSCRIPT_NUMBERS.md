@@ -20,6 +20,11 @@ Defaults unless a row says otherwise: real SS-RTD, `factor = 1.0`, `lambda = 0.4
 grey, 320x180. "Threshold" is the measurement cut `|.| > thr` applied to stored
 components afterwards. It is **not** the solver's soft-threshold.
 
+**Reproducing a number (added 2026-11-18):** every analysis number from §9 to §26 has a
+script in `src/analysis/`, re-run and checked identical to its recorded output. The
+script-to-section tables are `RESEARCH_LOG.md` §28.2 (§20-§26) and §30.3 (§9-§19). The
+180-video headline (C1-C3, §19.1) is `python -m src.analysis.s19_1_clean_rest_full`.
+
 ---
 
 ## A. Sentences that read well and are wrong
