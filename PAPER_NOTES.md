@@ -27,9 +27,10 @@ Why this is the stronger claim: "does method X transfer to dataset Y" is a yes/n
 about one method on one dataset, and a reviewer can discount it as a tuning or
 dataset artifact. The sink claim is a statement about the *model class* — any
 `X = L + S + E` decomposition that keeps an unconditional L1 noise term — and the
-clean-subset checkpoint gives it a **dose-response** (enrichment vs
-`foreground_density`, Spearman −0.731, log-log slope −0.54; `RESEARCH_LOG.md`
-§10.3), which is evidence about mechanism rather than about suitability. The λ
+clean arm gives it a **dose-response** (enrichment vs `foreground_density`,
+Spearman −0.508 over 180 videos, log-log slopes −0.517 / −0.537 in the two video
+groups; `RESEARCH_LOG.md` §19.1 — *number updated 2026-11-18, §29.3: this line
+quoted the 20-video checkpoint, −0.731 / −0.54, §10.3*), which is evidence about mechanism rather than about suitability. The λ
 sweep (§11) tests whether it survives the method's only parameter; if it does, the
 sink is structural rather than a tuned coincidence.
 
@@ -232,7 +233,7 @@ framing — see §23.3.
    *[`results/gate_candela/components_factor{1,2}.npz`; RESEARCH_LOG.md §6.5]*
 
 3. **IMPLEMENTATION FAITHFULNESS.** State that we implemented real SS-RTD
-   faithfully from Shen et al. 2022 — Tucker/HOOI for `L`, anisotropic TV for
+   faithfully from Shen et al. 2023 *(cited as 2022 until 2026-11-18; see `RESEARCH_LOG.md` §29.1)* — Tucker/HOOI for `L`, anisotropic TV for
    `S`, L1 for noise `E`, a single `lambda`, and adaptive ADMM penalties — and
    verified each component with unit tests against the paper's equations. This
    is the whole point of the pivot and should be stated as a strength.
@@ -295,7 +296,8 @@ framing — see §23.3.
 16. ✅ **THE IMPLEMENTATION REPRODUCES THE PAPER'S OWN FIG. 3 ON THE PAPER'S OWN DATA.**
    *A strong rigor point for the methodology section.*
 
-   Beyond the component unit tests (162 assertions across seven suites), the fully
+   Beyond the component unit tests (248 assertions across seven suites, `RESEARCH_LOG.md` §7.7 — *updated 2026-11-18,
+   §29.3: the count was 162 when this item was written*), the fully
    assembled SS-RTD was run against the paper's convergence experiment: SBI Candela,
    first 80 frames, 10% random-valued impulse noise, lambda 0.4, 100 iterations. **It
    passed every paper-derived criterion for both E-threshold factors:**
@@ -362,9 +364,13 @@ framing — see §23.3.
    *[`src/test_multipliers.py` test 5; `src/ssrtd.py:75,90`; RESEARCH_LOG.md §4
    item 1]*
 
-18. ✅ **ON CLEAN SURVEILLANCE VIDEO, `S` AND `E` SHARE THE SHARP EDGES.**
-   *Phase 3 complete, 300/300 runs: 180 videos at `lambda = 0.4`, plus 5 `lambda`
-   points on 20 of them. Established, with the measured spread. The "first look /
+18. ✅ **ON CLEAN SURVEILLANCE VIDEO, THE SUPPORTS OF `S` AND `E` COINCIDE FAR ABOVE CHANCE.**
+   ~~*ON CLEAN SURVEILLANCE VIDEO, `S` AND `E` SHARE THE SHARP EDGES.*~~ ⚠️ *Heading
+   superseded 2026-11-18 (`RESEARCH_LOG.md` §29.3): "edges" is a visual reading of one
+   video (§7.4); what was measured is support co-occurrence (enrichment), never an edge
+   measure. Use "edges" only when describing a figure.*
+   *Phase 3 complete, 320/320 runs across six arms (`RESEARCH_LOG.md` §22.5; updated
+   2026-11-18, §29.3: this line said 300/300 and listed only two arms). Established, with the measured spread. The "first look /
    one video, one lambda" caveat this item carried until 2026-11-07 is retired;
    the paragraphs below are kept in the order they were learned.*
 
@@ -376,6 +382,11 @@ framing — see §23.3.
    people visible only as small blobs. On the displayed frame, **about half of the
    pixels where `|S| > 0.05` also have `|E| > 0.05`**: the components share edges
    rather than separate.
+   ⚠️ *Superseded as a general claim 2026-11-18 (`RESEARCH_LOG.md` §29.3, from §25.4):
+   the paragraph above is what one frame of one video looked like. Over 179 videos
+   the coincidence is **not** localised to background: the inside/outside-box
+   enrichment gap is entirely enrichment's denominator, and raw `P(E|S)` is 31.5%
+   inside boxes against 29.8% outside. Never quote "background edges" as a finding.*
 
    **Quantified over the whole tensor 2026-10-17** (recomputed from the saved
    components, which is what Phase 3 records per run): `|S| > 0.05` on 16.98% of
@@ -520,7 +531,12 @@ framing — see §23.3.
    An exploratory finding replaces it at exploratory strength: `E` is ~19x **less
    foreground-selective** than `S` (`S` concentrates into object regions 306x, `E` only
    16x; E:S is 5.586 in background against 0.568 inside, 166/179 videos, p 5.6e-35).
-   Its confirmatory test is the noise condition and is not yet run.
+   ~~Its confirmatory test is the noise condition and is not yet run.~~ ⚠️ *Superseded
+   2026-11-18 (§29.3): the noise test was pre-registered (§26) and run (§27). §26.1
+   reversed the direction this paragraph implied — "the asymmetry shrinks under noise"
+   was idleness's prediction, not the sink's — and the result is **PRESERVED**
+   (r* 1.061, 95% CI 0.988–1.138): the weak verdict by design, the same one a null
+   produces (§26.7, §27.1). The ~19x figure stays exploratory.*
 
    **Second result, same arm: the effect is stronger the less the scene changes.**
    Enrichment versus `foreground_density` gives Spearman **rho = −0.731** (n = 20,
@@ -529,8 +545,12 @@ framing — see §23.3.
    **−0.529**, while controlling for density the support-size term *reverses* sign to
    +0.357. That is the opposite of "busy scenes confuse the decomposition", and it fits
    the mechanism: with little real foreground, nearly all of `S`'s above-threshold mass
-   *is* background edge structure, which is what `E` takes too. Untested hypothesis;
-   the direct test is enrichment inside versus outside the annotation boxes.
+   *is* background edge structure, which is what `E` takes too. ~~Untested hypothesis;
+   the direct test is enrichment inside versus outside the annotation boxes.~~
+   ⚠️ *Superseded 2026-11-18 (§29.3): that direct test was run (§24, §25.4) and the
+   hypothesis is **not supported** — the inside/outside gap is entirely enrichment's
+   denominator. The ρ −0.731 here is the 20-video subset; the 180-video value is
+   −0.508 (§19.1).*
 
    **IT SURVIVES `lambda`, AND IT IS NOT FLAT** (`RESEARCH_LOG.md` §20; 5 points x 20
    videos, clean, `factor = 1.0`). **Enrichment exceeds 1 in 96 of 96 defined runs at
@@ -553,8 +573,9 @@ framing — see §23.3.
    **withdrawn** (`RESEARCH_LOG.md` §20.7a): per video the sum rises 1.257x median
    and only 2 of 20 videos are within ±10% of conserved, while the transfer
    coefficient `dE/(-dS)` has a 0.2–12.5 per-video spread and must not be quoted as a
-   characteristic number. `S` is penalised out of the background edges and
-   `E` takes them over — on clean input, where `E` has no noise to represent. **This
+   characteristic number. ~~`S` is penalised out of the background edges and
+   `E` takes them over~~ `S` is penalised out of the shared structure and `E` takes it
+   over (⚠️ *"background edges" withdrawn 2026-11-18, §29.3, from §25.4*) — on clean input, where `E` has no noise to represent. **This
    is the misfit-sink claim measured as a dose-response in the model's own
    parameter**, and it is the strongest single piece of evidence for the paper's
    thesis. Quote it as such, not as a robustness check.
@@ -594,8 +615,9 @@ framing — see §23.3.
 
    Remaining caveats, now the honest full list: the `lambda` sweep and the
    pre-registered test are on the 20-video subset, not all 180; no ground truth, so
-   the one untested alternative is enrichment inside versus outside the annotation
-   boxes (§10.3); `E` having no designated job is now **tested** rather than merely
+   ~~the one untested alternative is enrichment inside versus outside the annotation
+   boxes (§10.3)~~ the inside/outside-box alternative was tested and is not supported
+   (§25.4; ⚠️ *superseded 2026-11-18, §29.3*); `E` having no designated job is now **tested** rather than merely
    corroborated (§22), but the 10% impulse model is one noise type, not a survey; and
    voxels are spatially autocorrelated, so the videos are the sample, not the voxels.
    *[RESEARCH_LOG.md §7.4, §6.6; `results/scratch/measure_virat_one_after_lever_E/`,

@@ -19,7 +19,7 @@ Three-component tensor decomposition `X = L + S + N`, where:
 It is essentially **"Tensor RPCA with the sparse part split into two
 soft-thresholded components."** Implemented in `src/ssrtd.py`.
 
-**This is not SS-RTD and not a variant of it.** Real SS-RTD (Shen et al. 2022,
+**This is not SS-RTD and not a variant of it.** Real SS-RTD (Shen et al. 2023 *(cited as 2022 until 2026-11-18; see `RESEARCH_LOG.md` §29.1)*,
 see `paper/SOURCE.md`) uses Tucker/HOOI for `L`, an anisotropic-TV penalty on `S`,
 a single tuning parameter `lambda`, and an adaptive conditional penalty schedule.
 None of those four elements is present here. The module filename, the

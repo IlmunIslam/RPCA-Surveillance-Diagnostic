@@ -47,7 +47,7 @@ method from the source paper.
 > the attribution 'Shen et al. 2022'", because no citation, DOI or bibliography
 > existed anywhere in the repo. The paper is now in hand and pinned down:
 > **Shen et al., IEEE TASE vol. 20 no. 1, pp. 583-596, 2022,
-> DOI 10.1109/TASE.2022.3163674**, with its equations transcribed and
+> DOI 10.1109/TASE.2022.3163674** *[citation year: 2023, the issue year -- see §29.1]*, with its equations transcribed and
 > cross-checked against rendered page images in
 > [`paper/SOURCE.md`](paper/SOURCE.md). The comparison it made possible is §4
 > item 1: `src/ssrtd.py` is **not** that method, so the "generic three-component
@@ -232,6 +232,7 @@ The paper asks a worthwhile question and the underlying phenomenon (parameter-dr
    **Status: resolved 2026-08-30.** The source paper is now in hand:
    **Shen et al., 2022, IEEE Transactions on Automation Science and Engineering,
    DOI [10.1109/TASE.2022.3163674](https://doi.org/10.1109/TASE.2022.3163674).**
+   *[Citation year: 2023, the issue year -- see §29.1.]*
    This closes the UNVERIFIED citation flag in §1 and supersedes the old open
    items on the smoothness penalty. Equations (3)–(5), (8)–(14) and Algorithm 1
    were transcribed from the PDF and cross-checked against rendered page images
@@ -334,7 +335,7 @@ The paper asks a worthwhile question and the underlying phenomenon (parameter-dr
    degenerates is not the method named.
 
 4. ~~**Pin down the baseline citation.**~~ **RESOLVED by item 1** — Shen et al.
-   2022, IEEE TASE, DOI 10.1109/TASE.2022.3163674. The §1 UNVERIFIED flag should
+   2022, IEEE TASE, DOI 10.1109/TASE.2022.3163674 *[citation year: 2023 -- §29.1]*. The §1 UNVERIFIED flag should
    now be updated to point at item 1.
 
 5. **Retract the overflow claim.** The docstring rationale (`ssrtd.py:55-57`) says
@@ -2070,7 +2071,7 @@ What the completed record supports, each clause earning its place:
 
 | clause | evidence | where |
 |---|---|---|
-| the noise term becomes a sink | `E` lands on sharp *background* edges on clean input, with 180/180 videos enriched above independence (pooled median 47.4x at threshold 0.05, 4.7x at 0.01) | §10, §19, §20.7b |
+| the noise term becomes a sink | ~~`E` lands on sharp *background* edges on clean input~~ `S`-membership predicts `E`-membership far above chance on clean input, with 180/180 videos enriched above independence (median **47.4x** over 180 videos at threshold 0.05; on the 20-video subset at lambda 0.4, 40.4x at 0.05 and **4.7x at 0.01**) ⚠️ *superseded 2026-11-18, §29.3* | §10, §19, §20.7b |
 | ...**when that noise is absent** | and it keeps doing so when noise is *present*: on uncorrupted voxels the sink is statistically indistinguishable from clean, while `E`'s noise work stays independent of `S` (0.99x on corrupted voxels) | §12, **§22** |
 | ...**coinciding with the sparse term** | raising lambda transfers structure from `S` to `E` -- `S`'s support falls 6.1x while `E`'s rises 2.8x, `E` gaining about twice what `S` loses | §20.2, §20.7a |
 | ...**more completely the less temporal change the scene contains** | Spearman -0.508 against `foreground_density` over 180 videos (p ~ 3.3e-13), same decay rate in both video groups (log-log slope -0.517 vs -0.537), holding at all five lambda; **independently corroborated against annotated object occupancy at rho -0.329 (p 6e-06)** | §19, §20.1, **§25.2** |
@@ -2741,6 +2742,96 @@ scripts. The 329 `objects.txt` files and everything after them are reproduced.
   manuscript's headline numbers.**
 - Analyses from before the 2026-08-29 transcript cannot be recovered this way; there is
   no transcript for that period.
+
+## 29. The SS-RTD citation year, the version of the PDF we hold, and stale-claim corrections, 2026-11-18
+
+Three things changed in the record on this date, all by the author's instruction. None of
+them changes a measured number. They are recorded together because each was found while
+building the extraction layer (`MANUSCRIPT_NUMBERS.md`) and the DOI pass (`src/verify_refs.py`).
+
+### 29.1 The citation year changes from 2022 to 2023
+
+Until today the record cited the source paper as **2022** everywhere: `CLAUDE.md`,
+`START_HERE.md`, `paper/SOURCE.md`, `ARCHIVE_BASELINE.md`, `RESEARCH_PLAN.md`,
+`PAPER_NOTES.md`, and §1 and §4 here. The DOI pass flagged it.
+
+| source | what it says |
+|---|---|
+| the PDF in the working tree | only one date: `(c)2022 IEEE`. Its running header has no volume, issue or date; pages are numbered 1-14; DOI 10.1109/TASE.2022.3163674. PDF metadata: created 2022-03-30, modified 2023-01-04 |
+| Crossref (`src/verify_refs.py`, 2026-11-18) | `issued` and `published-print` **2023**; no `published-online` date |
+| OpenAlex (same run) | `publication_year` **2022** |
+| the DOI string | `TASE.2022.…` is the year the DOI was assigned, not a publication date |
+
+**What the paper itself says:** the copy we hold says only 2022, because it is the
+**early-access** version (§29.2), released before it was assigned to an issue. The
+issue version is vol. 20, no. 1, dated 2023. The two sources do not contradict each
+other: OpenAlex records the year it went online, Crossref the year of the issue.
+
+**Decision: cite 2023.** IEEE reference style cites the issue an article appears in.
+The early-access year is used only for articles not yet assigned to an issue.
+
+**How the record was swept:**
+- **Live documents** (`CLAUDE.md`, `START_HERE.md`, `paper/SOURCE.md`,
+  `ARCHIVE_BASELINE.md`, `RESEARCH_PLAN.md`, `PAPER_NOTES.md`): the year now reads 2023, and
+  each carries a pointer here saying it read 2022 until today.
+- **This log's history:** the three bibliographic citations (§1's resolution note, §4
+  item 1, §4 item 4) are annotated in place, not rewritten. "Shen et al. 2022" as
+  author-year shorthand in other historical sections (e.g. §4's comparison table) stays
+  as written and should be read as referring to this paper.
+- **Not changed:**
+  - the BibTeX key `shen2022ssrtd` is only a label;
+  - code docstrings in `src/ssrtd_real.py` and `src/gate_candela.py` are left alone,
+    because the gate prints its docstring in its banner and its verified output should
+    not change for a citation year;
+  - `notes/README.md` is the author's space.
+- **Not re-verified today:** the volume and issue (20, 1) and pages (583-596) are as
+  `paper/SOURCE.md` recorded them on 2026-08-30. `verify_refs.py` compares title, authors
+  and year but not pages, and the network was down when this section was written.
+  **Check the pages against Crossref before the bibliography is final.**
+
+### 29.2 The PDF we verified against is the early-access version
+
+The evidence is in the table above: there is no volume or issue in the header, the pages
+run 1-14 rather than 583-596, and the only date is a 2022 copyright line. The PDF also
+has an unresolved cross-reference in its bookmarks ("Appendix A: Derivations for
+algorithm ??").
+
+**Consequence:** the equation transcription in `paper/SOURCE.md`, the §4 comparison, the
+unit tests against the equations and the Fig. 3 target values the gate reproduced
+(§6) were all checked against the **early-access** text. IEEE copy-edits between early
+access and the issue, and whether any equation, its numbering or Fig. 3 changed has
+**not been checked**. Checking means getting the issue version through the DOI and
+comparing the transcribed equations, Algorithm 1 and Fig. 3. Until then, the manuscript's
+"verified against the paper" should be read as "against the early-access version".
+`paper/SOURCE.md` now says so.
+
+### 29.3 Stale claims corrected (by author instruction)
+
+**Rule applied:**
+- A stale **number** is corrected, with its old value noted.
+- A changed **claim** keeps the old text, struck through, beside a superseding note.
+
+Section-A row numbers refer to `MANUSCRIPT_NUMBERS.md`.
+
+| where | kind | change |
+|---|---|---|
+| §23.1 table, row 1 | claim + mislabel | "`E` lands on sharp *background* edges" is struck (§25.4) and replaced by the co-occurrence statement. "pooled median 47.4x at 0.05, 4.7x at 0.01" put a 20-video number next to a 180-video one: 47.4x is the 180-video median at 0.05; **4.7x is the 20-video subset at lambda 0.4, threshold 0.01** (§20.7b). No 180-video value at 0.01 exists in the record (A9) |
+| `PAPER_NOTES` framing section | number | dose-response quoted at the 20-video checkpoint (rho -0.731, slope -0.54, §10.3); now the 180-video values (rho -0.508, slopes -0.517 / -0.537, §19.1) (A17) |
+| `PAPER_NOTES` item 16 | number | 162 → **248** assertions (§7.7) (A22) |
+| `PAPER_NOTES` item 18 heading | claim | "S AND E SHARE THE SHARP EDGES" → "THE SUPPORTS OF S AND E COINCIDE FAR ABOVE CHANCE"; "edges" was a visual reading of one video (§7.4) (A19) |
+| `PAPER_NOTES` item 18 run count | number | 300/300 → **320/320**, six arms (§22.5) (A23) |
+| `PAPER_NOTES` item 18, `video_01` paragraph | claim | kept as the first observation; a note now says it describes one frame of one video and that §25.4 rejects background localisation (A2) |
+| `PAPER_NOTES` item 18, "not yet run" | claim | the noise test ran: §26 reversed the implied direction, §27 returned PRESERVED (weak by design) (A15) |
+| `PAPER_NOTES` item 18, "Untested hypothesis..." | claim | the inside/outside test ran and is not supported (§25.4) (A18) |
+| `PAPER_NOTES` item 18, "`S` is penalised out of the background edges" | claim | "background edges" → "the shared structure" (A2) |
+| `PAPER_NOTES` item 18, caveat list | claim | "the one untested alternative is enrichment inside versus outside" → tested, not supported (A18) |
+| `MANUSCRIPT_NUMBERS.md` | status | live-copy column updated for each row above. The 248 count was cited to §7.5; it is recorded in §7.7 |
+| `AI_DISCLOSURE_FACTS.md` | status | the analysis-script gap is closed for §20-§26 (§28) and kept open for §9-§19. The 248 citation now points to §7.7 |
+
+**Still live, outside today's instruction** (listed in `MANUSCRIPT_NUMBERS.md` section A):
+- `RESEARCH_PLAN.md:16-17`, "the emptier the scene" (A1)
+- `START_HERE.md:72-73`, "background edges" (A2, A19)
+- `RESEARCH_PLAN.md:77-79`, Figure 5's premise (A2, A24)
 
 ## Verification provenance
 

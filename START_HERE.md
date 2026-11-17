@@ -7,7 +7,7 @@
 ## What this project is
 
 This repository is a faithful reimplementation of **SS-RTD** (Shen et al., IEEE TASE
-2022), used as the **instrument** for a claim about a class of models, for an IEEE Access
+2023 *(cited as 2022 until 2026-11-18; see `RESEARCH_LOG.md` §29.1)*), used as the **instrument** for a claim about a class of models, for an IEEE Access
 paper that received a major revision.
 
 **The contribution:** in a three-component decomposition `X = L + S + E`, the term

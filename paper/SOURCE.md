@@ -6,7 +6,7 @@ The algorithm this project takes as its baseline is **SS-RTD**, published as:
 > "Robust Tensor Decomposition based Background/Foreground Separation in
 > Noisy Videos and Its Applications in Additive Manufacturing,"
 > *IEEE Transactions on Automation Science and Engineering*,
-> vol. 20, no. 1, pp. 583-596, 2022.
+> vol. 20, no. 1, pp. 583-596, 2023.
 > DOI: [10.1109/TASE.2022.3163674](https://doi.org/10.1109/TASE.2022.3163674)
 
 ```bibtex
@@ -18,10 +18,22 @@ The algorithm this project takes as its baseline is **SS-RTD**, published as:
   volume  = {20},
   number  = {1},
   pages   = {583--596},
-  year    = {2022},
+  year    = {2023},
   doi     = {10.1109/TASE.2022.3163674}
 }
 ```
+
+**Citation year changed 2026-11-18 from 2022 to 2023** (`RESEARCH_LOG.md` §29.1).
+The article was published online in 2022 and appeared in vol. 20, no. 1, dated 2023;
+IEEE style cites the issue year. The BibTeX key `shen2022ssrtd` is a label and is kept
+so existing references do not break.
+
+**The PDF in the working tree is the early-access version, not the issue version.** Its
+header carries no volume, issue or date, it is paginated 1-14 rather than 583-596, its
+only date is `(c)2022 IEEE`, and it has an unresolved cross-reference ("Appendix A:
+Derivations for algorithm ??"). Every equation and section number below was verified
+against that version. Whether the issue version differs has not been checked
+(§29.2).
 
 ## Why the PDF is not in this repository
 
@@ -34,7 +46,7 @@ be re-obtained from the DOI above.
 ## Method summary (for verification against our code)
 
 Verified verbatim against the PDF on 2026-09-07. Section and equation numbers
-refer to the published article.
+refer to the early-access version of the article (see above; §29.2).
 
 - **Objective, eq. (5):** `min ||E||_1 + lambda * ||S||_TV1`
   subject to `X = L + S + E` and `L = G x1 U1 x2 U2 x3 U3`.

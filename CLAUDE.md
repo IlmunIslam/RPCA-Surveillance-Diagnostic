@@ -6,7 +6,7 @@
 
 ## What this project is
 
-A **faithful reimplementation of SS-RTD** (Shen et al., IEEE TASE 2022,
+A **faithful reimplementation of SS-RTD** (Shen et al., IEEE TASE 2023 *(cited as 2022 until 2026-11-18; see `RESEARCH_LOG.md` §29.1)*,
 DOI 10.1109/TASE.2022.3163674), used as the **instrument** for a claim about a class of
 models, plus a comparison against a **naive three-component baseline**. Target:
 IEEE Access (a major revision of an earlier submission).

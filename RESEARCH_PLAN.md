@@ -3,7 +3,7 @@
 ## Why we pivoted
 
 The code previously called "SS-RTD" (`src/ssrtd.py`) does NOT implement SS-RTD. It has four
-structural divergences from Shen et al. 2022 (see `RESEARCH_LOG.md` §4): no total-variation
+structural divergences from Shen et al. 2023 *(cited as 2022 until 2026-11-18; see `RESEARCH_LOG.md` §29.1)* (see `RESEARCH_LOG.md` §4): no total-variation
 smoothness term, no Tucker decomposition, two parameters instead of one λ, and a fixed
 geometric penalty ramp instead of the adaptive conditional scheme. All prior results labeled
 "SS-RTD" are mislabeled. A formal review scored the paper 4.5/10; the deepest issue is this
