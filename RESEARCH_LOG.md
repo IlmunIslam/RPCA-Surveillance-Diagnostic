@@ -2663,6 +2663,85 @@ band. The emulation of §26.4 therefore decides nothing here. Raw `Ef` moved ~4.
   in the direction neither hypothesis predicts, and its point estimate differs from the
   primary by 0.02. Not interpreted.
 
+## 28. The analysis code behind §20-§26 is now in the repository, 2026-11-18
+
+Until today, the numbers in §20.1-§26.4 were computed by code that was not in the
+repository. Some ran as inline scripts inside shell commands; the rest were files in the
+session's temporary scratch directory. Neither leaves a reproducible path, and
+`AI_DISCLOSURE_FACTS.md` §3a flagged this as a reproducibility hole and a disclosure gap.
+On the author's instruction, the code now lives in **`src/analysis/`**. Run each script
+from the repo root as `python -m src.analysis.<name>`.
+
+### 28.1 How the code was recovered
+
+- **Inline scripts:** recovered **verbatim** from the Claude Code session transcript
+  (`f234d330-...jsonl`). This is the exact command text that ran, with timestamps.
+- **File scripts:**
+  - `asym_prereg_inputs.py` and `asym_lamvol.py` were still on disk in the scratch
+    directory.
+  - `box_analysis.py`, `box_confound.py` and `box_asym.py` were gone from disk. They
+    were rebuilt from the transcript's file-write calls, which carry the full file
+    content. None had been edited after being written.
+- **The only changes** are:
+  - a docstring header naming the section and the provenance;
+  - the working directory or project path, made relative to the file instead of the
+    absolute path the scratch copies hard-coded.
+- **Two exceptions, marked in the files:**
+  - `s22_2_controls_1_2.py` keeps controls 1-2 of the original run, which crashed at
+    control 3 on a wrong noise-mask path. Controls 3-5 were rerun separately, and that
+    rerun is `s22_2_controls_3_5.py`.
+  - `s24_1_coverage.py` joins §24.1's four separate checks in their original order and
+    adds an all-180 bounds check, marked `ADDED` (see 28.3).
+
+### 28.2 Which script produces which section, and the re-run check
+
+Every script was re-run today against the current results and its output compared with
+the output recorded in the transcript. Where the transcript has no output, it was
+compared with the numbers in the section.
+
+| script | section(s) | re-run 2026-11-18 |
+|---|---|---|
+| `s20_1_lambda_points.py` | §20.1 (five lambda points: rates, enrichment, rho vs `fg`, slopes) | identical to recorded output |
+| `s20_3_balanced_panel.py` | §20.2-§20.3 (17-video balanced panel; 6.1x / 2.8x transfer) | identical |
+| `s20_7a_transfer_tau.py` | §20.7a (per-video transfer coefficient tau, 0.2-12.5 spread) | identical |
+| `s20_7a_sum_s21_2_beta_confound.py` | §20.7a (the sum is not conserved: 1.257x, 2/20) and §21.2 (beta_X 0.652x) | identical |
+| `s20_7b_threshold_dependence.py` | §20.7b (enrichment level is threshold-fragile: 4.7x vs 40.4x) | identical |
+| `s21_2_slope_threshold_robustness.py` | §21.2 (the lambda slope at both thresholds, CIs, sign tests) | identical |
+| `s22_1_primary.py` | §22.1 (the pre-registered primary readout) | identical |
+| `s22_2_controls_1_2.py` | §22.2 controls 1-2 (0.99x on corrupted voxels; beta_X at lambda 1.0) | identical, apart from the cut crash tail |
+| `s22_2_controls_3_5.py` | §22.2 controls 3-5 and §22.3 (level, clean vs noise) | identical |
+| `s24_1_coverage.py` | §24.1 (annotation coverage, frame indexing, resolution, bounds) | identical, plus the added check |
+| `s25_box_analysis.py` | §25.1, §25.2, §25.4 enrichment table; writes `results/metrics/box_occupancy.csv` | matches every number in §25.1/§25.2/§25.4 (transcript holds no output); the CSV is rewritten **byte-identical** |
+| `s25_4_box_confound.py` | §25.4 (raw `P(E\|S)` inside 31.548% vs outside 29.826%; 17.60x denominator) | identical to recorded output |
+| `s25_6_box_asym.py` | §25.6, EXPLORATORY (E:S 5.586 vs 0.568; 166/179) | identical to recorded output |
+| `s26_prereg_inputs.py` | §26.1(3), §26.4, §26.6 (corruption balance, k, tau, elasticity, c, validation, 48.0% spillover) | identical apart from stderr progress lines |
+| `s26_1_lambda_volatility.py` | §26.1(2) (lambda volatility of A, Ef, Sf) | identical |
+
+§27's numbers come from `src/prereg_s26_e_selectivity.py`, which was already in the
+repository (commit `a7e92df`).
+
+### 28.3 One qualifier that §24.1 left out
+
+§24.1 reported "boxes out of bounds in frames 0-299: **0**". The original check covered
+only the **first 40 videos** (`reg[:40]`, 58,603 rows), and §24.1 did not say so; it did
+qualify the frame-index check on the next line as "verified on 40 videos". The added
+check covers all 180 videos (913,843 rows in frames 0-299) and also finds **0**
+out-of-bounds boxes and **0** negative coordinates. §24.1's value stands, now on the
+full set.
+
+§24.1's "987 annotation files total" came from a directory listing, not one of these
+scripts. The 329 `objects.txt` files and everything after them are reproduced.
+
+### 28.4 Not covered by this move
+
+- The analyses behind **§9-§19** were also run inline, and they are **not** yet in the
+  repository. They include the 180-video headline in §19.1 (median 47.4x, rho -0.508)
+  and the noise-arm numbers in §12. They can be recovered from the transcript the same
+  way. **This matters more than anything moved today, because §19.1 holds the
+  manuscript's headline numbers.**
+- Analyses from before the 2026-08-29 transcript cannot be recovered this way; there is
+  no transcript for that period.
+
 ## Verification provenance
 
 Facts above were checked with, and are reproducible via:
