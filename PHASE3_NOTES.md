@@ -378,3 +378,14 @@ manuscript's headline mechanism result.
 This sits beside the older rule -- *every check must be able to say "unknown"* -- and
 has the same shape: **a statistic that reports confidently while being structurally
 unable to distinguish the effect from a nuisance parameter.**
+
+## Enumerate the joint outcome space before writing branches
+
+> **When a pre-registered verdict depends on more than one quantity, list every
+> combination of those quantities first and give each cell a verdict. Never assume two
+> quantities move together unless that is itself the thing being tested.**
+
+§24.3 assumed rho(occupancy, `foreground_density`) and rho(enrichment, occupancy) would
+agree. They are logically independent, and the outcome that occurred -- proxy fails,
+effect survives -- had no branch (`RESEARCH_LOG.md` §25.3, diagnosis corrected in
+§26.0). §26.5 is the first pre-registration written under this rule.

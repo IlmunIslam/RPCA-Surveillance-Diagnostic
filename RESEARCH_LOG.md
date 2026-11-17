@@ -2440,6 +2440,178 @@ because part of its background mass then has a designated job. The 20 `noise-sub
 runs already hold the supports and masks needed. That is a new pre-registration, and it
 goes in its own section before it is run.
 
+## 26. PRE-REGISTERED: does `E`'s foreground/background distribution survive the noise condition?, 2026-11-13
+
+Written, with its analysis script (`src/prereg_s26_e_selectivity.py`), **before any
+noise-condition support was opened for this question.** The inputs to the confound bound
+in 26.4 come from clean-condition supports only; from the noise runs they use
+`beta_X_final` (already published in §21.2/§22) and `noise_mask.npz` (a property of the
+generator, not of the decomposition). The script's `--plumbing-test` mode substitutes
+the clean supports for the noise arm, and was the only mode run.
+
+### 26.0 Supersession note on §25.3's diagnosis (author's correction)
+
+§25.3 diagnosed the pre-specification defect as "writing the criteria as a disjunction
+over two quantities that could move independently". **That diagnosis is superseded.** The
+flaw was not the disjunction; it was the unstated **assumption that
+rho(occupancy, `foreground_density`) and rho(enrichment, occupancy) would move together.**
+They are logically independent, and the world that actually occurred -- proxy fails,
+effect survives -- had **no branch at all**. The rule for every later pre-registration:
+**when outcomes depend on more than one quantity, enumerate the joint outcome space of
+those quantities first and give every cell a verdict, before writing any branch
+wording.** §25.3's text stands as written; this note governs.
+
+### 26.1 Three corrections to §25.6's sketch, made before anything was run
+
+1. **§25.6 predicted the wrong direction.** It said that if `E` is a misfit sink the
+   asymmetry should *shrink* under noise, "because part of its background mass then has
+   a designated job". That is the **idleness** hypothesis's prediction -- `E` holds
+   background mass only because it has nothing better to do -- which §22 already tested
+   and refuted on enrichment. On *uncorrupted* voxels the sink hypothesis predicts the
+   opposite: **preservation**, since the misfit `E` absorbs there is unchanged by
+   corruption elsewhere. The designated job is at the corrupted voxels, which this test
+   excludes.
+2. **The statistic must be `E`'s selectivity alone, not the E:S asymmetry.** The
+   asymmetry `A = (E_out/E_in) / (S_out/S_in)` contains an `S` factor that is volatile
+   under perturbations having nothing to do with `E`. Measured on clean data, the 20
+   noise-subset videos, uncorrupted voxels, threshold 0.01, lambda 0.4 -> 0.6:
+
+   | paired ratio, lambda 0.4 -> 0.6 | geo-mean | range | inside [0.80, 1.25] |
+   |---|---|---|---|
+   | `A` (the §25.6 asymmetry) | 1.765 | 0.395-4.737 | 7/20 |
+   | `S` factor `S_out/S_in` | 0.543 | 0.201-2.540 | 5/20 |
+   | **`E` factor `Ef = E_out/E_in`** | **0.959** | **0.850-1.073** | **20/20** |
+
+   The volatility is **entirely `S`'s**. A test on `A` would mostly measure how the noise
+   condition moves `S`, which is not the question. The confirmatory claim therefore
+   narrows to `E`'s own foreground/background distribution; the comparison with `S`
+   stays descriptive.
+3. **The asymmetry's *existence* cannot be confirmed here.** All 180 clean runs were
+   used to find it, and the noise runs are the same 20 videos. Nothing below can promote
+   "E is ~19x less foreground-selective than S" out of exploratory status; what can be
+   tested is whether `E`'s distribution **persists under a perturbation** that gives it
+   legitimate work. Also recorded: on this subset at threshold 0.01 the clean asymmetry
+   is > 1 on only **15/20** videos (median 8.38x), against 166/179 at 0.05 on all 180
+   -- the comparative claim is threshold-sensitive, another reason it stays exploratory.
+
+### 26.2 Definition
+
+Per video, on the uncorrupted voxels `U` of that video's `impulse10` run -- **the same
+voxel set in both arms** -- with §24.2's box mapping:
+
+    Ef(arm) = P(|E| > 0.01 | outside boxes, U) / P(|E| > 0.01 | inside boxes, U)
+    r_v     = Ef(impulse10) / Ef(clean)          lambda 0.4, factor 1.0, seed 0, n = 20
+
+Threshold 0.01 is primary: it matches §22, and the confound adjustment in 26.4 then
+interpolates inside the measured 0.01-0.05 range instead of extrapolating beyond it.
+A video is excluded only if an `E` rate in either population is zero in either arm.
+
+### 26.3 The two hypotheses
+
+| | what `E` does on uncorrupted voxels when it has noise to fit | predicted threshold-adjusted `r*` |
+|---|---|---|
+| **H1, misfit sink** (§22 supports it) | keeps absorbing the same misfit in the same places | **~1 (preserved)** |
+| **H0, idleness** | withdraws from background it only held for lack of work | **< 1 (withdrawn)** |
+
+### 26.4 The author's three conditions
+
+**(1) The denominator lesson.** §24.4 died because enrichment, `P(E|S)/P(E)`, normalised
+by each population's own `E`-density while claiming to measure co-occurrence, so a
+density difference between populations masqueraded as a localisation effect. `Ef` has
+no such normalisation: it **is** a density comparison and claims to be nothing else, so
+a population density difference is its signal, not a nuisance. A *uniform*
+multiplicative change in `E`'s rate between conditions cancels exactly. What remains is
+whether anything **other than the hypothesis** changes density *differentially* between
+inside and outside across conditions. Checked:
+
+- **Corruption is not differential:** median corruption rate 0.1000 inside boxes (range
+  0.0990-0.1017) and 0.1000 outside (0.1000-0.1000). Restricting to `U` leaves the
+  composition of both populations unchanged.
+- **`S` does not enter `Ef`** -- this is why 26.1(2) matters for condition (1) as well.
+- **Box populations are identical** in both arms (same annotations, same `U`).
+- **`E`'s own threshold does change differentially** -- that is condition (2).
+
+**(2) The `beta_X` confound, bounded.** `E`'s threshold is `factor/beta_X`; per video
+`k = beta_X(clean)/beta_X(noise)` has median **1.533** (range 0.766-4.079). Its effect
+on `Ef` was measured on clean data:
+
+- **Elasticity** `e = dln Ef / dln m_E`, from `E > 0.01` vs `E > 0.05` with everything
+  else fixed: median **-1.010** (range -1.811 to -0.132). **Negative: raising `E`'s
+  threshold lowers `Ef`**, because `E`'s background entries are smaller in magnitude.
+  The author's worry is confirmed: the confound pushes toward **H0**.
+- **Exact emulation.** Soft-thresholding at `tau = 1/beta_X` then measuring at `m` keeps
+  `|A| > m + tau`; a threshold of `k*tau` is therefore emulated on clean supports by
+  measuring at `m' = m + (k - 1) tau`. `tau_clean <= 0.00545 < m` on all 20, so `m'`
+  lies in 0.0087-0.0138 (median 0.0114).
+- **Validated** against the three clean runs with float components kept: emulated vs
+  log-linear-interpolated ratio 0.979 vs 0.976 (`video_01`), 1.051 vs 1.049
+  (`video_108`), 0.792 vs 0.813 (`video_165`). The interpolation is good to ~0.02.
+- **Predicted confound-only ratio** `c_v = (m'/m)^e`: geo-mean **0.900** (range
+  0.720-1.104). **Conservative** `c_v = k^e` (credits the confound with the full
+  threshold ratio, an over-shift since `tau < m`): geo-mean **0.703** (0.236-1.214).
+
+The confound would therefore manufacture ~10% apparent withdrawal by itself, ~30% at
+worst. The test uses `r*_v = r_v / c_v`, and **H0 can only be declared if withdrawal
+survives the conservative credit**. Remaining limitation, as in §21.2: the emulation
+assumes the pre-threshold argument is unchanged, i.e. it captures the threshold channel
+and not the ADMM coupling. That coupling is exactly what H0 would act through, so it is
+the thing being tested rather than a nuisance.
+
+**(3) The circularity.** It **does not affect the within-video comparison**: both arms
+use the same video, boxes and voxel set, so the mechanical link between box coverage
+and population size is common to numerator and denominator of `r_v` and cancels. It
+affects only **between-video** correlations (e.g. against occupancy), and none is
+registered here. One residual bias **does** remain and it favours H1: §24.2's
+floor/ceil mapping counts true background as "inside", so any background-only change
+leaks partly into the inside rate and **attenuates `r_v` toward 1**. Hence the
+inner-box secondary in 26.5.
+
+### 26.5 Verdict rules (implemented in `verdict()`; 95% CI is t-based on `ln r*`)
+
+| verdict | condition |
+|---|---|
+| **PRESERVED -- H1 supported** | CI of geo-mean `r*` lies inside **[0.80, 1.25]**, **and** both secondaries (26.6) have geo-means inside it |
+| **WITHDRAWN -- H0 supported, H1 falsified** | CI upper bound of `r*` < 1.0 **and** conservative-adjusted geo-mean < 0.80 |
+| **GROWN -- H1 falsified** | CI lower bound of `r*` > 1.25 (predicted by neither) |
+| **INCONCLUSIVE** | everything else, including primary PRESERVED with a secondary outside the band (named) |
+
+The band [0.80, 1.25] was fixed from the clean lambda reference in 26.1(2): an
+unrelated perturbation moves `Ef` 0.850-1.073 on all 20 videos.
+
+**Joint outcome space** (26.0's rule applied): the verdict depends on `r*` and on the
+conservative `r*`, which can disagree. `r*` in band covers PRESERVED/INCONCLUSIVE
+whatever `r*_cons` does (it is larger than `r*` whenever `e < 0` and `k > 1`); `r*`
+below 1 with `r*_cons` below 0.80 is WITHDRAWN; `r*`'s CI entirely below 1 with `r*_cons` at or above
+0.80 is INCONCLUSIVE -- "withdrawal the confound could explain"; `r*` above the band is
+GROWN regardless. Every cell has a verdict.
+
+Also reported, not decisive: unadjusted `r` (confound entirely against H1), per-video
+count of `r*` in band, and the within-condition `A` under noise.
+
+### 26.6 Secondaries
+
+- **Spillover-excluded:** `U` minus voxels with a corrupted 6-neighbour (keeps 48.0%
+  of voxels). Addresses TV- and Tucker-coupled leakage from corrupted neighbours.
+- **Inner boxes:** ceil-start / floor-end mapping, so no background pixel is counted
+  inside. Addresses 26.4(3)'s bias toward H1.
+
+### 26.7 What a PRESERVED verdict would and would not mean, stated now
+
+Plumbing test (clean supports in both arms, i.e. a world where noise changes nothing
+but `beta_X`): `r` = 1.000 exactly, `r*` geo-mean 1.111 (CI 1.055-1.170) -> PRESERVED.
+That is the honest reading of this test's power: **PRESERVED means "nothing beyond the
+threshold channel moved `E`'s distribution"**. It refutes idleness acting through
+coupling on `E`'s spatial distribution; it is largely complementary to, not independent
+of, §22, which refuted idleness on enrichment. It says nothing about whether `E` is
+less foreground-selective than `S` -- that stays exploratory (26.1(3)).
+
+**The design's power is asymmetric.** PRESERVED is **weak** evidence, because it is also
+what a null result looks like -- the plumbing test above returns PRESERVED in a world
+where noise changes nothing but `beta_X`. WITHDRAWN is **strong** evidence, because it
+must survive the worst-case `beta_X` credit. A reader who finds PRESERVED has learned
+only that nothing beyond the threshold channel moved `E`'s distribution; it is not a
+positive demonstration of the misfit sink.
+
 ## Verification provenance
 
 Facts above were checked with, and are reproducible via:
