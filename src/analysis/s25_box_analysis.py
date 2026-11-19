@@ -12,6 +12,10 @@ from pathlib import Path
 import numpy as np
 
 PROJ = Path(__file__).resolve().parents[2]  # was a hard-coded absolute path
+# 2026-11-19: the printed threshold labels are corrected (RESEARCH_LOG.md section 31.7).
+# The mask keys '001'/'005' are thresholds 0.01/0.05, but the original printed them as
+# 0.{thr} = '0.001'/'0.005'. Labels now print 0.{thr[1:]}. No computed value changes,
+# and this is the only change to the original code besides PROJ.
 sys.path.insert(0, str(PROJ))
 from src.phase3_checkpoint import median, mean, sd, spearman, pearson  # noqa: E402
 
@@ -120,7 +124,7 @@ def main():
         o2, f2, e2 = [x[0] for x in ok], [x[1] for x in ok], [x[2] for x in ok]
         r_occ, p_occ = spearman(o2, e2)
         r_fg, p_fg = spearman(f2, e2)
-        print(f"  thr 0.{thr} (n={len(e2)}): enrichment vs box_occupancy "
+        print(f"  thr 0.{thr[1:]} (n={len(e2)}): enrichment vs box_occupancy "
               f"rho {r_occ:+.3f} (p~{p_occ:.2e})   |   vs foreground_density "
               f"rho {r_fg:+.3f} (p~{p_fg:.2e})   | diff {abs(r_occ - r_fg):.3f}")
 
@@ -145,7 +149,7 @@ def main():
         outgt = sum(1 for x in ratio if x > 1)
         n = len(ratio)
         sp = min(1.0, 2 * sum(math.comb(n, k) for k in range(outgt, n + 1)) / 2 ** n)
-        print(f"  thr 0.{thr}: n={n}  inside median {median([i for i, o in pairs]):8.2f}x  "
+        print(f"  thr 0.{thr[1:]}: n={n}  inside median {median([i for i, o in pairs]):8.2f}x  "
               f"outside median {median([o for i, o in pairs]):8.2f}x")
         print(f"            OUTSIDE/INSIDE ratio: median {median(ratio):.3f}x  "
               f"geo-mean {math.exp(mean(lr)):.3f}x  range {min(ratio):.2f}-{max(ratio):.2f}x")

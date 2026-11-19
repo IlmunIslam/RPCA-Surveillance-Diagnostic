@@ -15,6 +15,10 @@ from pathlib import Path
 import numpy as np
 
 PROJ = Path(__file__).resolve().parents[2]  # was a hard-coded absolute path
+# 2026-11-19: the printed threshold labels are corrected (RESEARCH_LOG.md section 31.7).
+# The mask keys '001'/'005' are thresholds 0.01/0.05, but the original printed them as
+# 0.{thr} = '0.001'/'0.005'. Labels now print 0.{thr[1:]}. No computed value changes,
+# and this is the only change to the original code besides PROJ.
 sys.path.insert(0, str(PROJ))
 from src.phase3_checkpoint import median, mean, spearman  # noqa: E402
 
@@ -69,7 +73,7 @@ for i, r in enumerate(reg):
 
 for thr in ("005", "001"):
     v = res[thr]
-    print(f"\n=== threshold 0.{thr}, n={len(v)} ===")
+    print(f"\n=== threshold 0.{thr[1:]}, n={len(v)} ===")
     print(f"{'population':>12s} {'S>thr%':>9s} {'E>thr%':>9s} {'raw P(E|S)%':>12s} "
           f"{'enrichment':>11s} {'voxels':>12s}")
     for name, k in (("INSIDE", 1), ("OUTSIDE", 2)):

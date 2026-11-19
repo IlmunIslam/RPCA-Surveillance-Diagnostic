@@ -12,6 +12,10 @@ PROJECT_DIR = Path(__file__).resolve().parents[2]
 os.chdir(PROJECT_DIR)
 sys.path.insert(0, str(PROJECT_DIR))
 # ---- original code below ----
+# 2026-11-19: the printed threshold labels are corrected (RESEARCH_LOG.md section 31.7).
+# The mask keys '001'/'005' are thresholds 0.01/0.05, but the original printed them as
+# 0.{thr} = '0.001'/'0.005'. Labels now print 0.{thr[1:]}. No computed value changes,
+# and this is the only change to the original code.
 import numpy as np
 from pathlib import Path
 from src.phase3_checkpoint import median, spearman
@@ -36,7 +40,7 @@ for thr in ('001','005'):
         c=parts(f'{i}__impulse10__f1__lam0.4__s0',thr,'unc'); d=parts(f'{i}__impulse10__f1__lam1__s0',thr,'unc')
         if a and b and c and d: cr.append(b/a); nr.append(d/c)
     rs,ps=spearman(cr,nr)
-    print(f'  thr 0.{thr}: n={len(cr)}  rank rho between clean and noise lambda-ratios {rs:+.3f} (p~{ps:.4f})')
+    print(f'  thr 0.{thr[1:]}: n={len(cr)}  rank rho between clean and noise lambda-ratios {rs:+.3f} (p~{ps:.4f})')
 print()
 print('CONTROL 4: annihilation at lam 1.0, thr 0.05')
 for cond,pop,lbl in (('clean','all','clean (all voxels)'),('impulse10','unc','noise (uncorrupted)')):
@@ -50,5 +54,5 @@ for thr in ('001','005'):
         n=[parts(f'{i}__impulse10__f1__{lam}__s0',thr,'unc') for i in ids]
         pair=[(a,b) for a,b in zip(c,n) if a and b]
         rs,_=spearman([a for a,b in pair],[b for a,b in pair])
-        print(f'  thr 0.{thr} {lam:7s}: clean median {median([a for a,b in pair]):7.2f}x  '
+        print(f'  thr 0.{thr[1:]} {lam:7s}: clean median {median([a for a,b in pair]):7.2f}x  '
               f'noise median {median([b for a,b in pair]):7.2f}x  rank rho {rs:+.3f}  n={len(pair)}')

@@ -1827,7 +1827,10 @@ Consequences, all of which belong in the manuscript:
   statistic". It is robust to `factor`, to the noise condition and to lambda, and
   **fragile to the measurement threshold.** State the scope.
 - What *is* threshold-robust is the **lambda-slope** of enrichment (1.240x at 0.01
-  against 1.290x at 0.05 -- a 4% difference across a 5x threshold change). That is
+  against 1.290x at 0.05 -- a 4% difference across a 5x threshold change *[the two medians
+  are over different samples: 1.240x is n=20, 1.290x is **n=17**, because three lambda 1.0
+  cells are undefined at 0.05 (`S` claims no pixels; §20.3). This section does not say so;
+  §21.2 states both n correctly. The numbers stand; quote them with both n -- §31.7]*). That is
   why §21 pre-registers the slope and not the level.
 
 ## 21. PRE-REGISTERED PREDICTION: the lambda-slope of enrichment under noise, 2026-11-06 23:52 UTC
@@ -3064,6 +3067,71 @@ They are not a coverage gap.
 | 23:36 "Full lambda-sweep analysis with undefined cases separated" | **`s20_1_lambda_points.py`**: the command text is byte-identical |
 | 23:50 "Compute power of the paired sign test" | inside **`s21_2_slope_threshold_robustness.py`**: all 34 non-blank lines of the command are in the file. §28 combined it with the 23:49 slope analysis into one script |
 | 23:35 "Run lambda-sweep enrichment analysis" | **superseded, nothing to recover.** It crashed at lambda 0.8 (`TypeError` on an undefined enrichment where `S` claims no pixels). The 23:36 rerun above separated those cases, and every row the crashed pass printed (lambda 0.2, 0.4, 0.6) reappears identically in `s20_1`'s output |
+
+### 31.7 The printed-n check (Limit 2's remedy): one unstated sample mismatch, and a label bug, 2026-11-19
+
+Run across all 31 scripts on the author's instruction, to catch the class §31.5 says the
+pin cannot see.
+
+**Method.**
+- **The code:** every construct that restricts the sample by design was located: slices,
+  hard-coded videos, `head`, `break`, sampling.
+- **The output:** every n each script prints was compared with the n its section states.
+
+**What is clean:**
+- The design restrictions are deliberate single-video or extreme-case inspections, and
+  each section says so:
+  - `video_01` (§10.2, and §10.3's pooled-without-`video_01`);
+  - `video_173` (§12);
+  - `video_165` (§10.1, §14);
+  - the top 3 in §19.2.
+- §24.1's two `reg[:40]` slices. The frame-index check is stated as "verified on 40
+  videos". The bounds check is §28.3's case, since settled on all 180.
+- Every printed n that the record quotes is stated in its section, including:
+  - 19/19 and 17/17 (§20.1);
+  - 17/20 → 16/17 → 15/16 (§22.1);
+  - n=16 (§22.2);
+  - 179 vs 180 (§25.4, §25.6);
+  - the three validation runs (§26.4).
+
+**Finding 1: §20.7 compares two samples without saying so.**
+- §20.7 quotes the lambda-slope of enrichment as "1.240x at 0.01 against 1.290x at 0.05
+  -- a 4% difference across a 5x threshold change".
+- 1.240x is the median over **20** videos. 1.290x is over **17**: three lambda 1.0 cells
+  are undefined at threshold 0.05, because `S` claims no pixels (§20.3).
+- §21.2 states both n correctly; §20.7 does not.
+
+What was done:
+- The numbers stand. §20.7 is annotated in place under §10.3's rule.
+- `MANUSCRIPT_NUMBERS.md` E10 (which said "20") now flags that the threshold-invariance
+  claim must be quoted with both sample sizes.
+- `PAPER_NOTES.md:469`, which quoted the same "4% difference" without n, is annotated
+  the same way. It is the copy the author drafts from.
+
+**Finding 2: seven scripts printed wrong threshold labels.** The scripts were:
+- `s20_7b_threshold_dependence`
+- `s21_2_slope_threshold_robustness`
+- `s22_2_controls_1_2`
+- `s22_2_controls_3_5`
+- `s25_4_box_confound`
+- `s25_6_box_asym`
+- `s25_box_analysis`
+
+They key the stored masks `'001'`/`'005'`, which are thresholds **0.01/0.05**. They
+printed the labels as `0.{thr}`, which reads "0.001"/"0.005".
+
+Checks:
+- The values were always right. `'005'` gives the 40.4x known at 0.05.
+- No document in the record carries the wrong label. Every 0.001/0.005 in the record is
+  the baseline's `lam_s`/`lam_n`.
+
+Fixed 2026-11-19: labels now print `0.{thr[1:]}`. Each file carries a marked note saying
+this is its only change to the original code.
+
+**Verified by re-run.** All seven were re-run. Each new output equals its pre-fix output
+with the 26 labels mapped 0.001 → 0.01 and 0.005 → 0.05, and nothing else changed. No
+"0.001" or "0.005" label remains. `s25_box_analysis` rewrote
+`results/metrics/box_occupancy.csv` **byte-identical**.
 
 ## Verification provenance
 

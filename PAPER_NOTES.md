@@ -467,7 +467,10 @@ framing — see §23.3.
    Enrichment is robust to `factor`, to the noise condition and to `lambda`, and
    **fragile to the measurement threshold** — state that scope. What is threshold-robust
    is enrichment's **`lambda`-slope** (1.240x at 0.01 vs 1.290x at 0.05, a 4% difference
-   across a 5x threshold change), which is why `RESEARCH_LOG.md` §21 pre-registers the
+   across a 5x threshold change *[the two medians are over different samples: 1.240x is
+   n=20, 1.290x is **n=17**, because three lambda 1.0 cells are undefined at 0.05 (`S` claims
+   no pixels; `RESEARCH_LOG.md` §20.3). `RESEARCH_LOG.md` §21.2 states both n correctly. The
+   numbers stand; quote them with both n -- `RESEARCH_LOG.md` §31.7]*), which is why `RESEARCH_LOG.md` §21 pre-registers the
    slope rather than the level.
 
    **The noise condition decomposes it, and confirms the mechanism** (same video,

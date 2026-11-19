@@ -12,6 +12,10 @@ PROJECT_DIR = Path(__file__).resolve().parents[2]
 os.chdir(PROJECT_DIR)
 sys.path.insert(0, str(PROJECT_DIR))
 # ---- original code below ----
+# 2026-11-19: the printed threshold labels are corrected (RESEARCH_LOG.md section 31.7).
+# The mask keys '001'/'005' are thresholds 0.01/0.05, but the original printed them as
+# 0.{thr} = '0.001'/'0.005'. Labels now print 0.{thr[1:]}. No computed value changes,
+# and this is the only change to the original code.
 import numpy as np, collections, math
 from pathlib import Path
 from src.phase3_checkpoint import median, mean, sd
@@ -35,7 +39,7 @@ for thr in ('001','005'):
     # sign test p under H0: p=0.5
     n=len(rat); k=up
     p=2*sum(math.comb(n,i) for i in range(k,n+1))/2**n
-    print(f'  thr 0.{thr}: n={n:2d} median {median(rat):.3f}x  geom-mean {math.exp(mean(lr)):.3f}x  '
+    print(f'  thr 0.{thr[1:]}: n={n:2d} median {median(rat):.3f}x  geom-mean {math.exp(mean(lr)):.3f}x  '
           f'sd(log) {sd(lr):.3f}  {up}/{n} up  sign-test p={min(p,1):.2e}')
     sem=sd(lr)/math.sqrt(n)
     print(f'            95% CI on geometric mean: '

@@ -141,7 +141,7 @@ still says it. Those are the places most likely to leak into prose.
 | E7 | λ 0.4 (Shen et al.'s value) is near the conservative end | §20.2 | — | D |
 | E8 | rank ρ vs λ-0.4 ordering +0.932 / +0.991 / +0.972 / +0.968 | §20.4 | — | D |
 | E9 | raw share 4.28x more λ-sensitive than enrichment (9.08x vs 2.12x) | §20.5 | 17 | D, a reporting choice, not a finding |
-| E10 | λ-slope is threshold-robust: 1.240x (0.01) vs 1.290x (0.05) | §20.7b | 20 | D |
+| E10 | λ-slope is threshold-robust: 1.240x (0.01, **n=20**) vs 1.290x (0.05, **n=17**) | §20.7b; n from §21.2 | ⚠️ **two different samples**: three λ 1.0 cells are undefined at 0.05 (§20.3). The threshold-invariance claim must be quoted **with both sample sizes**, never as a bare "4% difference" (§31.7). Was "20" here until 2026-11-19. `PAPER_NOTES.md:469` annotated the same day | D |
 
 ---
 

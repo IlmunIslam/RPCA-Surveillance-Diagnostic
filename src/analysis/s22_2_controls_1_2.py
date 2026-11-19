@@ -13,6 +13,10 @@ PROJECT_DIR = Path(__file__).resolve().parents[2]
 os.chdir(PROJECT_DIR)
 sys.path.insert(0, str(PROJECT_DIR))
 # ---- original code below ----
+# 2026-11-19: the printed threshold labels are corrected (RESEARCH_LOG.md section 31.7).
+# The mask keys '001'/'005' are thresholds 0.01/0.05, but the original printed them as
+# 0.{thr} = '0.001'/'0.005'. Labels now print 0.{thr[1:]}. No computed value changes,
+# and this is the only change to the original code.
 import numpy as np, math, csv
 from pathlib import Path
 from src.phase3_checkpoint import median, mean, sd, spearman
@@ -33,7 +37,7 @@ for lam,tag in ((0.4,'lam0.4'),(1.0,'lam1')):
     for thr in ('001','005'):
         v=[parts(f'{i}__impulse10__f1__{tag}__s0',thr,'cor') for i in ids]
         v=[x for x in v if x]
-        print(f'  {tag} thr 0.{thr}: median {median(v):.3f}x  range {min(v):.3f}-{max(v):.3f}x  n={len(v)}')
+        print(f'  {tag} thr 0.{thr[1:]}: median {median(v):.3f}x  range {min(v):.3f}-{max(v):.3f}x  n={len(v)}')
 print()
 print('CONTROL 2: did the beta_X confound actually appear at lam 1.0?')
 rows=list(csv.DictReader(open('results/metrics/ssrtd_real_results.csv',newline='',encoding='utf-8')))

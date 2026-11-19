@@ -12,6 +12,10 @@ PROJECT_DIR = Path(__file__).resolve().parents[2]
 os.chdir(PROJECT_DIR)
 sys.path.insert(0, str(PROJECT_DIR))
 # ---- original code below ----
+# 2026-11-19: the printed threshold labels are corrected (RESEARCH_LOG.md section 31.7).
+# The mask keys '001'/'005' are thresholds 0.01/0.05, but the original printed them as
+# 0.{thr} = '0.001'/'0.005'. Labels now print 0.{thr[1:]}. No computed value changes,
+# and this is the only change to the original code.
 import numpy as np, csv, collections
 from pathlib import Path
 from src.phase3_checkpoint import median, mean, sd, spearman
@@ -36,7 +40,7 @@ for lam,tag in ((0.4,'lam0.4'),(1.0,'lam1')):
             r=enr(f'{v}__clean__f1__{tag}__s0', thr)
             if r: vals[v]=r
         res[(lam,thr)]=vals
-        print(f'lam {lam} thr 0.{thr}: n={len(vals):2d} median enrichment {median([x["enr"] for x in vals.values()]):7.1f}x '
+        print(f'lam {lam} thr 0.{thr[1:]}: n={len(vals):2d} median enrichment {median([x["enr"] for x in vals.values()]):7.1f}x '
               f'S {median([x["s"] for x in vals.values()]):7.4f}%  E {median([x["e"] for x in vals.values()]):7.4f}%  '
               f'P(E|S) {median([x["pes"] for x in vals.values()]):6.2f}%')
 print()
@@ -46,7 +50,7 @@ for thr in ('001','005'):
     com=[v for v in a if v in b]
     rat=[b[v]['enr']/a[v]['enr'] for v in com]
     up=sum(1 for x in rat if x>1)
-    print(f'  thr 0.{thr}: paired lam0.4->1.0 enrichment ratio median {median(rat):.3f}x '
+    print(f'  thr 0.{thr[1:]}: paired lam0.4->1.0 enrichment ratio median {median(rat):.3f}x '
           f'(n={len(com)}, {up}/{len(com)} up, range {min(rat):.2f}-{max(rat):.2f})')
 print()
 print('=== how much does a 5x THRESHOLD change move enrichment? (bounds the beta_X confound) ===')
