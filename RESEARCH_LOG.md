@@ -2975,6 +2975,96 @@ Each is consistent with the arm's state at the time it ran.
 - **Analyses from before the transcript begins (2026-08-29)** cannot be recovered this
   way, as §28.4 says.
 
+## 31. Systematic check: was any other number computed on a partial arm and quoted under a complete-arm heading? 2026-11-18
+
+**Result: no.** The only case is the one §30.3 found by accident (§10.3's rho +0.818).
+This section records that the check was run, how it works, and what it cannot see, so a
+later session does not have to wonder whether it was done.
+
+### 31.1 Why the check was needed
+
+§30.3 found §10.3's +0.818 only because its script would not reproduce at the row count
+its section implied. The script had run when the clean-subset arm was half done, and the
+number was then quoted in a section headed "20/20 runs". The same thing could have
+happened elsewhere. Now that every script is pinned to its original row count, the
+pattern is detectable systematically.
+
+**The signature:** a script reproduces its recorded output only at a row count below the
+size of the arm its section reports.
+
+### 31.2 Method
+
+1. **Scripts that reproduce on the current CSV without a pin cannot carry the
+   signature.** Every arm is now complete (320/320). If such a script had originally run
+   on a partial arm, its output today would differ from the recorded output.
+   - This clears all 15 §20-§26 scripts (§28.2), and also `s9_4`, `s10_1`, `s10_2`,
+     `s19_1` and `s19_2`.
+   - Most §20-§26 scripts glob run directories or loop over the registry instead of
+     reading the CSV. The same argument applies to them.
+   - `s10_1` had been tested only on the full CSV, so it was also run at its section's
+     20 rows. Its output is identical.
+   - This used an `open()` shim that truncates the CSV without modifying any file. As a
+     control, the shim was shown to change `s19_1`'s output at 229 rows.
+2. **For each pinned script**, the row counts that reproduce its output (§30.3) were
+   compared with the row count at which its section's arm was complete:
+   - clean-subset 20;
+   - noise-subset 40;
+   - factor2-subset 60;
+   - clean-rest 230.
+3. **For every flagged script**, each of its aggregate statistics was searched for across
+   every tracked document. Per-video values were excluded, since they do not depend on
+   how complete the arm was.
+
+### 31.3 Findings
+
+| script(s) | reproduces at | arm complete at | where its numbers are quoted |
+|---|---|---|---|
+| `s10_3_mechanical_check`, `s10_3_partial_correlations` | 10 rows | 20 | **§10.3's rho +0.818, unlabelled.** Already annotated (§30.3). Their other aggregates (-0.830, -0.803, +0.437, ...) appear nowhere |
+| `s12_2_precision_at_n11` | 31 rows (n=11) | 40 | only as "n=11": retracted in §12.2; `MANUSCRIPT_NUMBERS` A5 gives "at n=11 → -0.248 at n=20" |
+| `s15_1`, `s15_2` | 114 rows (n=54) | 230 | only as "n=54", "PROVISIONAL" or "SUPERSEDED": §15, §19.1's "§15 at n=54" column, §19.2, `MANUSCRIPT_NUMBERS` A6, `PHASE3_NOTES.md:267` |
+| the other 10 pinned scripts | ranges that include the arm-complete count | -- | -- |
+
+The search's other hits were coincidental. One was the λ table's `E>thr` value 0.803.
+Others were substrings, such as `14.1` as a heading number and `20.12` inside `2.12x`.
+
+### 31.4 Limit 1: only numbers produced by the 31 recovered scripts are covered
+
+A number computed by a run that was **not** recovered falls outside this check. The
+§10.3 case shows the risk: an earlier partial-arm run, separate from the full-arm run,
+feeding the record. To bound this, every one of the 103 transcript commands that read
+the results CSV was listed.
+- Most are operational: row counts, disk, watchdog state, spot checks.
+- Six analysis commands outside the 31 ran while an arm was incomplete:
+  - the two first-row inspections (2026-10-19 04:18 and 12:44) print per-video values,
+    which are the same whether the arm is complete or not;
+  - four mid-arm checkpoint reports on the clean-subset arm:
+    - two at 1 row (04:19, a run and its re-run after a fix). With one video, their
+      "aggregates" are just `video_165`'s own values (199.8x);
+    - one at 2 rows (04:43);
+    - one at 10 rows (08:08).
+- **None of the 2-row or 10-row aggregates appears in the record.** The 10-row report's
+  median 52.6x, pooled 43.8x and rho -0.830, and the 2-row report's pooled 116.0x, are
+  absent.
+
+Analyses from before the transcript begins (2026-08-29) remain outside every check (§28.4).
+
+### 31.5 Limit 2: a script restricted by design is invisible to the pin
+
+A script that uses a subset **by construction**, such as §24.1's out-of-bounds check over
+`reg[:40]` (§28.3), reproduces at every row count, so no pin reveals it. Catching that
+class needs a different check: compare the n each script prints with the n its section
+states.
+
+### 31.6 Three 2026-11-06 commands that were not yet placed: all accounted for
+
+They are not a coverage gap.
+
+| command (UTC) | where it is |
+|---|---|
+| 23:36 "Full lambda-sweep analysis with undefined cases separated" | **`s20_1_lambda_points.py`**: the command text is byte-identical |
+| 23:50 "Compute power of the paired sign test" | inside **`s21_2_slope_threshold_robustness.py`**: all 34 non-blank lines of the command are in the file. §28 combined it with the 23:49 slope analysis into one script |
+| 23:35 "Run lambda-sweep enrichment analysis" | **superseded, nothing to recover.** It crashed at lambda 0.8 (`TypeError` on an undefined enrichment where `S` claims no pixels). The 23:36 rerun above separated those cases, and every row the crashed pass printed (lambda 0.2, 0.4, 0.6) reappears identically in `s20_1`'s output |
+
 ## Verification provenance
 
 Facts above were checked with, and are reproducible via:
