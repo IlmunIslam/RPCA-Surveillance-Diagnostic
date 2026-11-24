@@ -1,76 +1,72 @@
 # RPCA Surveillance Diagnostic
 
-A diagnostic and stability study of tensor RPCA-family decomposition on surveillance video.
+An empirical study of three-component tensor decomposition on surveillance video, using
+the VIRAT Ground dataset.
 
-## Overview
+## Correction to the earlier version of this repository
 
-This is **not** a new compression method and **not** a comparative benchmark. It is a
-diagnostic study of how RPCA-family low-rank + sparse tensor decompositions actually behave
-on real surveillance footage, using the VIRAT Ground dataset.
+An earlier version of this repository and of the accompanying manuscript reported results
+from `src/ssrtd.py` under the name **"SS-RTD"**, and said a smoothness penalty "from the
+original paper" had been removed because it caused float64 overflow. **Both statements
+were wrong.**
 
-The central finding is a **structural collapse**: SS-RTD's three-component decomposition
-(smooth + sparse + residual) systematically degenerates to two components on surveillance
-video. The foreground moves entirely into one component while the other collapses to
-near-zero — in **all 180 videos**, with no middle ground. Which component wins is determined
-by the **lambda parameter ratio**, not by scene content.
+- `src/ssrtd.py` is **not** SS-RTD (Shen et al., IEEE TASE 2023). It is a **naive
+  three-component baseline**. It differs from SS-RTD in four structural ways: averaged
+  tensor SVT instead of Tucker/HOOI; no total-variation smoothness term; two L1 terms and
+  two parameters instead of one; and an open-loop penalty ramp instead of an adaptive one.
+- The code **never contained** a smoothness penalty, so none was removed, and no overflow
+  was ever recorded. Git history shows this (`RESEARCH_LOG.md` §1; §4 items 1 and 5).
 
-## Findings
+The results of that earlier version (the "component collapse" on 180 videos, the
+lambda-ratio sweep, and the hybrid compression result) are properties of the **naive
+baseline**. They are archived unchanged, with SHA256 checksums, in
+`results/baseline_naive/`, which is kept locally and is not in this repository
+(`ARCHIVE_BASELINE.md` describes the archive).
 
-- **Component collapse (main result).** SS-RTD's three-way split collapses to two on every
-  one of the 180 videos: foreground concentrates in a single component, the other goes to
-  near-zero. The winner is set by the lambda ratio (`lam_s` vs `lam_n`), independent of the
-  scene.
-- **Background compressibility (supporting).** Tensor RPCA's low-rank background compresses
-  roughly **6.8% better than H.264** on 176/180 videos.
-- **Hybrid recombination fails (negative result).** Recombining components does **not** beat
-  H.264 on any video (0/180). This is reported as a negative result, not a contribution.
+## What the study is now
+
+SS-RTD has been **reimplemented from the paper** (`src/ssrtd_real.py`) and verified
+against it: unit tests component by component, and a reproduction of the paper's own
+Fig. 3 on its own data (`RESEARCH_LOG.md` §6).
+
+The study asks what the **noise** component `E` of an `L + S + E` decomposition does
+when the input contains no noise for it to represent. On clean VIRAT video, `E` claims
+the support of the smooth-foreground component `S` far more often than chance on every
+video. SS-RTD is the instrument used to measure this; the claim is about the model class.
+Current state and results: `START_HERE.md`, `RESEARCH_LOG.md`.
 
 ## Methods
 
-Two decomposition methods are actually run and analyzed:
-
-| Method | Description |
-|---|---|
-| Tensor RPCA | Low-rank tensor decomposition (background / foreground separation) |
-| SS-RTD | Smooth + Sparse + Residual Tensor Decomposition |
-
-Matrix RPCA and Chen (2012) are discussed as prior work but are **not** run in this study.
+| Code | What it is | Name used |
+|---|---|---|
+| `src/ssrtd_real.py` | SS-RTD as published: Tucker/HOOI low-rank `L`, anisotropic-TV smooth `S`, L1 noise `E`, one `lambda`, adaptive ADMM penalties | "SS-RTD" |
+| `src/ssrtd.py` | Naive three-component baseline: tensor SVT plus two soft-thresholded sparse terms `S`, `N`, parameters `lam_s`, `lam_n` | "the naive three-component baseline" (never "SS-RTD") |
+| `src/tensor_rpca.py` | Two-component tensor RPCA | "Tensor RPCA" |
 
 ## Dataset
 
-180 surveillance videos from **VIRAT Ground 2.0** (the `videos-01` subset), obtained from the
-official Kitware source. All source clips are 1280×720. Each is capped at 300 frames and
-processed at **320×180 grayscale**.
+180 videos from **VIRAT Ground 2.0** (the `videos-01` subset), from the official Kitware
+source. All source clips are 1280×720. Each is capped at 300 frames and processed at
+**320×180 grayscale**, scaled to [0, 1]. `data/` is not in the repository.
 
-## Metrics
-
-- PSNR and SSIM (reconstruction quality)
-- Sparsity % of the sparse / residual components
-- File size (KB) and compression ratio vs. H.264 (ffmpeg, CRF=23 reference / CRF=28 components)
-
-## Repository Structure
+## Repository structure
 
 ```
 RPCA_Surveillance_Diagnostic/
-├── src/                  # Core Python modules
-│   ├── preprocessing.py  # Frame extraction and downsampling
-│   ├── tensor_rpca.py    # Tensor RPCA implementation
-│   ├── ssrtd.py          # SS-RTD implementation
-│   ├── hybrid_encoder.py # Component recombination (negative-result experiment)
-│   ├── compression.py    # H.264 / ffmpeg compression measurement
-│   ├── metrics.py        # PSNR, SSIM, sparsity, compression metrics
-│   ├── param_sweep.py    # Lambda-ratio parameter sweep
-│   ├── batch_runner.py   # Resumable batch driver over the 180-video set
-│   └── video_registry.py # Dataset inventory builder
-├── video_registry.csv    # 180-video inventory / short-ID mapping
-├── data/                 # Processed frames (gitignored)
-├── results/              # Decomposition outputs (gitignored)
-└── logs/                 # Run logs (gitignored)
+├── src/
+│   ├── ssrtd_real.py      # SS-RTD, reimplemented from the paper
+│   ├── ssrtd.py           # naive three-component baseline (not SS-RTD)
+│   ├── tensor_rpca.py     # two-component tensor RPCA
+│   ├── gate_candela.py    # verification gate against the paper's Fig. 3
+│   ├── phase3_*.py        # batch runner for the VIRAT runs
+│   ├── test_*.py          # unit tests (plain scripts: python -m src.test_...)
+│   ├── analysis/          # scripts behind the RESEARCH_LOG results
+│   ├── preprocessing.py, metrics.py, compression.py, hybrid_encoder.py
+│   └── run_pipeline.py, param_sweep.py, batch_runner.py   # baseline-era pipeline
+├── paper/                    # source citation, manuscript audit, revision plan
+├── RESEARCH_LOG.md           # the record: every decision, result and correction
+└── START_HERE.md             # entry point
 ```
-
-## Target Publication
-
-IEEE Access
 
 ## Author
 

@@ -45,30 +45,42 @@ def tensor_svt(X, threshold):
 
 def ssrtd(X, lam_s=0.01, lam_n=0.001, max_iter=500, tol=1e-7):
     """
-    SS-RTD modified for surveillance video — smoothness penalty removed.
+    Naive three-component baseline. This is NOT SS-RTD (Shen et al., IEEE TASE
+    2023); the real SS-RTD is src/ssrtd_real.py.
 
     Decomposes X = L + S + N where:
-      L = low-rank background (Tucker structure via tensor SVT)
-      S = sparse foreground (sharp-edged on surveillance video)
-      N = noise/movement carrier (carries motion when S collapses to 0)
+      L = low-rank term: tensor SVT on each mode unfolding, refolded and averaged
+      S = first sparse term: elementwise soft-threshold at lam_s / mu
+      N = second sparse term: elementwise soft-threshold at lam_n / mu
 
-    Smoothness penalty from original paper removed: causes float64 overflow on
-    sharp-edged human foreground in surveillance domain. Documented as a
-    domain-transfer finding of this research.
+    It differs from SS-RTD in four structural ways (RESEARCH_LOG.md section 4
+    item 1): averaged SVT instead of Tucker/HOOI; no total-variation smoothness
+    term (S here is plain L1); two L1 terms and two parameters instead of one
+    L1 term and one lambda; and an open-loop penalty ramp (mu *= 1.5 each
+    iteration, capped at 1e6) instead of SS-RTD's adaptive conditional update.
+
+    Correction: earlier versions of this docstring said a smoothness penalty
+    "from the original paper" had been removed because it caused float64
+    overflow. That was never true. This code never contained a smoothness
+    penalty, and no overflow was ever recorded (RESEARCH_LOG.md section 1).
+    The claim is retracted.
+
+    Results from this function are archived in results/baseline_naive/ and
+    must be reported as the naive baseline's, never as SS-RTD's.
 
     Parameters
     ----------
     X        : ndarray (H, W, T), float64, values in [0, 1]
-    lam_s    : sparsity regularization for S (default 0.001)
-    lam_n    : sparsity regularization for N (default 0.002)
+    lam_s    : sparsity regularization for S (default 0.01)
+    lam_n    : sparsity regularization for N (default 0.001)
     max_iter : maximum ADMM iterations
     tol      : convergence tolerance on relative change in L
 
     Returns
     -------
-    L : ndarray (H, W, T) — background
-    S : ndarray (H, W, T) — sparse foreground
-    N : ndarray (H, W, T) — noise/movement carrier
+    L : ndarray (H, W, T) — low-rank term
+    S : ndarray (H, W, T) — first sparse term
+    N : ndarray (H, W, T) — second sparse term
     n_iter : int
     """
     mu = 1.0 / (np.sqrt(max(X.shape)) * np.mean(np.abs(X)))
@@ -104,10 +116,9 @@ def ssrtd(X, lam_s=0.01, lam_n=0.001, max_iter=500, tol=1e-7):
     s_nnz_final = np.mean(np.abs(S) > 1e-6) * 100
     n_nnz_final = np.mean(np.abs(N) > 1e-6) * 100
 
-    print(f"SS-RTD converged in {n_iter} iterations")
+    print(f"Naive baseline stopped after {n_iter} iterations")
     print(f"  Final S sparsity: {s_nnz_final:.2f}% nonzero")
     print(f"  Final N sparsity: {n_nnz_final:.2f}% nonzero")
-    print("  Domain note: S collapse expected on surveillance video — N carries movement")
 
     return L, S, N, n_iter
 
@@ -174,7 +185,7 @@ if __name__ == "__main__":
     noise = np.random.normal(0, 0.005, (H, W, T))
     X = np.clip(L_true + S_true + noise, 0, 1)
 
-    print(f"Running SS-RTD on synthetic {H}x{W}x{T} tensor")
+    print(f"Running the naive baseline on synthetic {H}x{W}x{T} tensor")
     print(f"lam_s={0.001}, lam_n={0.002}")
     L, S, N, n_iter = ssrtd(X, lam_s=0.001, lam_n=0.002, max_iter=200, tol=1e-5)
 

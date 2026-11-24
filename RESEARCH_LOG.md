@@ -380,9 +380,9 @@ The paper asks a worthwhile question and the underlying phenomenon (parameter-dr
    | Artifact | Status | Auto-loads? |
    |---|---|---|
    | `CLAUDE.md` | ✅ done, commit `9dc2ef3` — rewritten to the post-pivot framing; the two flagged lines no longer exist | yes |
-   | `README.md` | ⏳ pending — still says "SS-RTD's three-component decomposition (smooth + sparse + residual)" and labels `ssrtd.py` as "SS-RTD implementation" (lines 11-12, 19, 35, 58) | no |
+   | `README.md` | ✅ done 2026-11-24 — rewritten: a correction section (not SS-RTD; no penalty ever existed; points to §1), the three methods under their correct names, the current study. Was: "SS-RTD's three-component decomposition (smooth + sparse + residual)", `ssrtd.py` as "SS-RTD implementation" | no |
    | `ssrtd_*` column names in both CSVs | ✅ **decided 2026-09-18: do NOT rename.** The archived CSVs are immutable — all three copies are verified byte-identical by SHA256, and renaming in place would invalidate that and require redoing every copy. The terminology mapping is recorded in `ARCHIVE_BASELINE.md` §6; new terminology is applied in the analysis and figure scripts that *read* the files, never in the stored data | no |
-   | `src/ssrtd.py` module docstring | ⏳ pending — still reads "SS-RTD modified for surveillance video — smoothness penalty removed" and repeats the retracted overflow claim (lines 46-57); stale `lam_s`/`lam_n` defaults in the parameter block too | no |
+   | `src/ssrtd.py` module docstring | ✅ done 2026-11-24 — the `ssrtd()` docstring now names it the naive baseline, lists the four divergences, and retracts the overflow claim with a pointer to §1; parameter defaults in the docstring corrected to 0.01/0.001. Printed labels "SS-RTD" → "naive baseline", and the "Domain note: S collapse expected…" print removed. Verified by AST comparison: apart from docstrings and string literals, the only change is that one removed `print`. `python -m src.ssrtd` passes. Not touched (outside this row): "SS-RTD" labels for the baseline in `hybrid_encoder.py:9`, `metrics.py:58`, `param_sweep.py:2,6,198,200`, `run_pipeline.py:105,117,119,224`, `tune_ssrtd.py:64` | no |
    | The manuscript (Overleaf) | ⏳ Phase 5 | no |
    | A real name for the baseline | ⏳ Phase 2 | no |
 
