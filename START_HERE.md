@@ -15,8 +15,11 @@ designated for **noise** becomes a **misfit sink** when that noise is absent, an
 sink coincides with the **sparse** term more completely the less temporal change the scene contains.
 **SS-RTD is the instrument, not the subject.**
 
-The *experiment* is a domain-transfer test: a method designed and validated on smooth
-X-ray foreground, run on sharp-edged surveillance video. That is the right description
+The *experiment* is a transfer test: ~~a method designed and validated on smooth
+X-ray foreground, run on sharp-edged surveillance video~~ a method validated only on video
+**with injected noise**, run on clean surveillance video where `E` has no noise to absorb.
+*(Superseded 2026-11-24, `RESEARCH_LOG.md` §32.1: SS-RTD was designed for noisy X-ray
+video but validated on surveillance and traffic clips, always with impulse noise.)* That is the right description
 of the **experiment** and the wrong description of the **contribution** -- the narrower
 special case of the claim above, kept because the experiment is what produced it. The project pivoted after we discovered that the old code (`src/ssrtd.py`),
 whose results the original manuscript reported as "SS-RTD", **was not SS-RTD**: it had no

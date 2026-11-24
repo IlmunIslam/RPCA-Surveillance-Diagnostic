@@ -369,6 +369,15 @@ framing — see §23.3.
    two-L1 argument. The real algorithm's penalty instead tracks actual
    convergence, so it cannot go inert the same way.
 
+   > ⚠️ **Flagged 2026-11-24 (`RESEARCH_LOG.md` §32.3). Does not hold for the
+   > parameter sweep.** `param_sweep.csv` records `n_iter = 32` in all 100 runs.
+   > `mu` stopped at 3.5-3.8e4, never reaching the cap (which binds at iteration
+   > 40), and the radii `lam/mu` stayed ≥ 1e-6 for 23-28 of the 32 iterations.
+   > So "saturated" is false and "inert for the large majority of each run" is
+   > contradicted for the sweep. The difference in kind between the schedules
+   > stands. The claim remains open for the 180-video batch only. Do not draft
+   > from the paragraph above without §32.3.
+
    Currently reasoning plus arithmetic, **not yet measured** — the baseline's
    iteration counts were never recorded (`all_results.csv` has no `n_iter`
    column). **Becomes answerable when (g) logs `beta` per iteration on real

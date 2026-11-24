@@ -16,8 +16,12 @@ designated for **noise** becomes a **misfit sink** when that noise is absent -- 
 sink coincides with the **sparse** term more completely the less temporal change the scene contains.
 SS-RTD is the instrument, **not the subject**.
 
-The *experiment* that establishes this is a domain-transfer test -- a method designed and
-validated on smooth X-ray foreground, run on sharp-edged surveillance foreground (VIRAT).
+The *experiment* that establishes this is a transfer test -- ~~a method designed and
+validated on smooth X-ray foreground, run on sharp-edged surveillance foreground (VIRAT)~~
+a method validated only on video **with injected noise**, run on clean surveillance video
+(VIRAT) where `E` has no noise to absorb. *(Superseded 2026-11-24, `RESEARCH_LOG.md`
+§32.1: SS-RTD was designed for noisy X-ray video but validated on surveillance and
+traffic clips — Candela, Caviar, CDnet — always with 10-30% impulse noise.)*
 That remains the correct description of the experiment and it is not wrong; it is the
 narrower special case. It is the wrong description of the **contribution**, and must not
 be used as one. See `PAPER_NOTES.md`'s framing section.
